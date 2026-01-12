@@ -5,6 +5,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 from .models import Log
 from .blockchain_service import blockchain_service
+from .ml_engine import ml_engine
 
 class ZeroTrustMiddleware:
     def __init__(self, get_response):
@@ -63,7 +64,7 @@ class ZeroTrustMiddleware:
             self.log_access(user.username, request_type, 'Denied', 'High', device_info, f"Device Health Failed: {', '.join(health['issues'])}")
             return JsonResponse({'error': 'Access Denied: Device Health Check Failed', 'issues': health['issues']}, status=403)
 
-        # 3. Risk Scoring
+        # 3. Risk Scoring (Rule-based)
         risk_score = 0
         
         if device_info.get('location') == 'Unknown':
@@ -76,6 +77,14 @@ class ZeroTrustMiddleware:
         if 'admin-panel' in path and user.role != 'admin':
             risk_score += 50
             
+        # 4. ML Anomaly Detection (Statistical)
+        anomaly_boost = ml_engine.predict_anomaly({
+            'hour': current_hour,
+            'risk_level': 'Low', # Initial estimate
+            'status': 'Pending'
+        })
+        risk_score += anomaly_boost
+
         # Determine Level
         if risk_score > 70:
             risk_level = 'Critical'
@@ -88,14 +97,15 @@ class ZeroTrustMiddleware:
             
         # Enforcement
         if risk_score > 60:
-            self.log_access(user.username, request_type, 'Denied', risk_level, device_info, f"Risk Score too high: {risk_score}")
-            return JsonResponse({'error': 'Access Denied: Risk Threshold Exceeded'}, status=403)
+            self.log_access(user.username, request_type, 'Denied', risk_level, device_info, f"Risk Score too high: {risk_score} (Anomaly Boost: {anomaly_boost})")
+            return JsonResponse({'error': 'Access Denied: Risk Threshold Exceeded', 'risk_score': risk_score}, status=403)
             
         # Attach risk level to request for views to use
         request.risk_level = risk_level
+        request.risk_score = risk_score
         
         # Log Success
-        self.log_access(user.username, request_type, 'Granted', risk_level, device_info, 'All checks passed')
+        self.log_access(user.username, request_type, 'Granted', risk_level, device_info, f'All checks passed. Risk: {risk_score}')
         
         return self.get_response(request)
 

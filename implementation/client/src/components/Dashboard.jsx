@@ -3,6 +3,7 @@ import { AuthContext } from '../context/AuthContext';
 import DeviceSimulator from './DeviceSimulator';
 import AuditLog from './AuditLog';
 import AnalyticsPanel from './AnalyticsPanel';
+import AIAssistant from './AIAssistant';
 import api from '../services/api';
 import { FileText, Shield, MonitorX, Key } from 'lucide-react';
 import { notifySuccess, notifyError, notifyInfo } from '../services/tost';
@@ -13,6 +14,7 @@ const Dashboard = () => {
     const [loading, setLoading] = useState(false);
     const [triggerLog, setTriggerLog] = useState(0);
     const [logs, setLogs] = useState([]);
+    const [verifying, setVerifying] = useState(false);
 
     // Mock fetching logs for analytics
     const fetchLogsForAnalytics = async () => {
@@ -31,13 +33,19 @@ const Dashboard = () => {
 
 
     const accessResource = async (endpoint) => {
+        if (endpoint === 'confidential-resource' || endpoint === 'admin-panel') {
+            setVerifying(true);
+            await new Promise(r => setTimeout(r, 2000)); // Simulate scan
+            setVerifying(false);
+        }
+
         setLoading(true);
         setAccessResult(null);
         try {
             notifyInfo(`Requesting access to ${endpoint}...`);
             const res = await api.get(`/secure/${endpoint}`);
             setAccessResult({ success: true, message: res.data.message, riskLevel: res.data.riskLevel, data: res.data.data });
-            notifySuccess('Access Granted');
+            notifySuccess('Identity Verified & Access Granted');
         } catch (err) {
             setAccessResult({
                 success: false,
@@ -65,6 +73,9 @@ const Dashboard = () => {
 
                 {/* Device Controls */}
                 <DeviceSimulator />
+
+                {/* AI Assistant */}
+                <AIAssistant />
 
                 {/* Resources */}
                 <div className="glass-panel" style={{ padding: '20px' }}>
@@ -106,6 +117,17 @@ const Dashboard = () => {
                                 {accessResult.success ? 'ACCESS GRANTED' : 'ACCESS BLOCKED'}
                             </h2>
                             <p>{accessResult.message}</p>
+                            {accessResult.data && (
+                                <div style={{
+                                    background: 'rgba(255,255,255,0.05)',
+                                    padding: '10px',
+                                    borderRadius: '8px',
+                                    fontFamily: 'monospace',
+                                    border: '1px solid rgba(255,255,255,0.1)'
+                                }}>
+                                    {accessResult.data}
+                                </div>
+                            )}
                             {accessResult.issues && (
                                 <ul>{accessResult.issues.map((issue, i) => <li key={i}>{issue}</li>)}</ul>
                             )}
@@ -123,6 +145,37 @@ const Dashboard = () => {
                 <AuditLog refreshTrigger={triggerLog} />
             </div>
 
+            {/* Biometric Overlay */}
+            {verifying && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+                    background: 'rgba(0,0,0,0.8)', zIndex: 999, display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(10px)'
+                }}>
+                    <div className="scan-line" style={{
+                        width: '300px', height: '4px', background: 'var(--primary-color)',
+                        boxShadow: '0 0 20px var(--primary-color)', position: 'absolute', top: '50%'
+                    }} />
+                    <Shield size={100} color="var(--primary-color)" className="pulse" />
+                    <h2 className="text-gradient" style={{ marginTop: '40px' }}>VERIFYING BIOMETRICS</h2>
+                    <p style={{ color: '#888' }}>Scanning cryptographic signature and behavioral entropy...</p>
+                </div>
+            )}
+
+            <style>{`
+                .pulse { animation: pulse 2s infinite; }
+                @keyframes pulse {
+                    0% { transform: scale(1); opacity: 0.8; }
+                    50% { transform: scale(1.1); opacity: 1; }
+                    100% { transform: scale(1); opacity: 0.8; }
+                }
+                .scan-line { animation: scan 2s linear infinite; }
+                @keyframes scan {
+                    0% { top: 30%; opacity: 0; }
+                    50% { opacity: 1; }
+                    100% { top: 70%; opacity: 0; }
+                }
+            `}</style>
         </div>
     );
 };

@@ -9,93 +9,123 @@ import api from '../services/api';
 
 const AnalyticsPage = () => {
     const [logs, setLogs] = useState([]);
-
-    // Mock Data generation for rich visuals if logs are sparse
+    const [intelligence, setIntelligence] = useState({ summary: 'Loading AI Intel...', chart_data: [0, 0, 0, 0, 0] });
     const [trafficData, setTrafficData] = useState([]);
     const [riskData, setRiskData] = useState([]);
 
+    const fetchIntelligence = async () => {
+        try {
+            const res = await api.get('/ai/intelligence');
+            setIntelligence(res.data);
+
+            // Map AI chart data to a format Recharts likes
+            const mappedData = res.data.chart_data.map((val, i) => ({
+                name: `T-${5 - i}`,
+                intensity: val,
+                baseline: 20 + Math.random() * 10
+            }));
+            setTrafficData(mappedData);
+        } catch (e) {
+            console.error("Intelligence fetch failed");
+        }
+    };
+
+    const fetchLogs = async () => {
+        try {
+            const res = await api.get('/secure/logs');
+            setLogs(res.data);
+
+            // Calculate risk distribution from real logs
+            const dist = { Low: 0, Medium: 0, High: 0, Critical: 0 };
+            res.data.forEach(l => dist[l.risk_level] = (dist[l.risk_level] || 0) + 1);
+            setRiskData([
+                { name: 'Low', value: dist.Low || 1 },
+                { name: 'Medium', value: dist.Medium || 1 },
+                { name: 'High', value: dist.High || 1 },
+                { name: 'Critical', value: dist.Critical || 1 },
+            ]);
+        } catch (e) { }
+    };
+
     useEffect(() => {
-        // Fetch real logs
-        const fetchLogs = async () => {
-            try {
-                const res = await api.get('/secure/logs');
-                setLogs(res.data);
-            } catch (e) { }
-        };
         fetchLogs();
+        fetchIntelligence();
 
-        // Generate Mock Trend Data
-        const mockTrend = Array.from({ length: 24 }, (_, i) => ({
-            name: `${i}:00`,
-            safe: Math.floor(Math.random() * 100) + 50,
-            threats: Math.floor(Math.random() * 30),
-            risk: Math.floor(Math.random() * 80)
-        }));
-        setTrafficData(mockTrend);
+        const logInt = setInterval(fetchLogs, 5000);
+        const aiInt = setInterval(fetchIntelligence, 2000); // 2-second AI intelligence
 
-        const mockRisk = [
-            { name: 'Low', value: 400 },
-            { name: 'Medium', value: 300 },
-            { name: 'High', value: 100 },
-            { name: 'Critical', value: 50 },
-        ];
-        setRiskData(mockRisk);
-
+        return () => {
+            clearInterval(logInt);
+            clearInterval(aiInt);
+        };
     }, []);
 
     const COLORS = ['#00ff9d', '#00f0ff', '#fcee0a', '#ff003c'];
 
     return (
-        <div style={{ height: '100%', overflowY: 'auto' }}>
-            <h1 className="text-gradient">Security Intelligence & Analytics</h1>
-            <p style={{ color: '#888', marginBottom: '30px' }}>Real-time threat vectors and network telemetry.</p>
-
-            {/* KPI Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '30px' }}>
-                <MetricCard label="Total Requests" value="14,205" delta="+12%" icon={<Activity size={24} color="#00f0ff" />} />
-                <MetricCard label="Threats Blocked" value="342" delta="-5%" color="#ff003c" icon={<Shield size={24} color="#ff003c" />} />
-                <MetricCard label="Active Sessions" value="28" delta="+2" icon={<Globe size={24} color="#00ff9d" />} />
-                <MetricCard label="Avg Risk Score" value="12/100" delta="-2pts" color="#fcee0a" icon={<AlertTriangle size={24} color="#fcee0a" />} />
+        <div style={{ height: '100%', overflowY: 'auto', paddingBottom: '40px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                    <h1 className="text-gradient">Zero Trust Security Intelligence</h1>
+                    <p style={{ color: '#888', marginBottom: '30px' }}>Blockchain-verified logs analyzed by Gemini RAG engine.</p>
+                </div>
+                <div style={{ background: 'rgba(0, 240, 255, 0.1)', padding: '10px 20px', borderRadius: '12px', border: '1px solid var(--primary-color)' }}>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--primary-color)', fontWeight: 'bold' }}>AI STATUS</div>
+                    <div style={{ fontSize: '0.9rem' }}>Real-time Analysis Active</div>
+                </div>
             </div>
 
-            {/* Main Charts Area */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginBottom: '20px' }}>
+            {/* AI Summary Banner */}
+            <div className="glass-panel" style={{ padding: '15px 25px', marginBottom: '30px', borderLeft: '4px solid var(--secondary-color)', display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <Activity className="pulse" color="var(--secondary-color)" />
+                <span style={{ fontSize: '1.1rem', fontStyle: 'italic', color: '#e0e6ed' }}>
+                    "{intelligence.summary}"
+                </span>
+            </div>
 
-                {/* Network Traffic Area Chart */}
-                <div className="glass-panel" style={{ padding: '20px', height: '300px' }}>
-                    <h4>Network Traffic Volume (24h)</h4>
-                    <ResponsiveContainer width="100%" height="100%">
+            {/* KPI Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+                <MetricCard label="System Integrity" value="100%" delta="Stable" icon={<Shield size={24} color="#00f0ff" />} />
+                <MetricCard label="Threat Vectors" value={intelligence.chart_data.reduce((a, b) => a + b, 0)} delta="Live" color="#ff003c" icon={<AlertTriangle size={24} color="#ff003c" />} />
+                <MetricCard label="Processed Nodes" value={logs.length} delta={`+${logs.filter(l => l.status === 'Granted').length}`} icon={<Globe size={24} color="#00ff9d" />} />
+                <MetricCard label="Network Load" value="Optimal" delta="0ms Lag" color="#fcee0a" icon={<Activity size={24} color="#fcee0a" />} />
+            </div>
+
+            {/* Charts Area */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '20px' }}>
+
+                {/* AI Predicted Threat Intensity */}
+                <div className="glass-panel" style={{ padding: '20px', height: '350px' }}>
+                    <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <Shield size={18} color="var(--primary-color)" /> AI Predicted Threat Intensity
+                    </h4>
+                    <ResponsiveContainer width="100%" height="85%">
                         <AreaChart data={trafficData}>
                             <defs>
-                                <linearGradient id="colorSafe" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#00ff9d" stopOpacity={0.8} />
-                                    <stop offset="95%" stopColor="#00ff9d" stopOpacity={0} />
-                                </linearGradient>
-                                <linearGradient id="colorThreat" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#ff003c" stopOpacity={0.8} />
-                                    <stop offset="95%" stopColor="#ff003c" stopOpacity={0} />
+                                <linearGradient id="colorIntense" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="var(--secondary-color)" stopOpacity={0.8} />
+                                    <stop offset="95%" stopColor="var(--secondary-color)" stopOpacity={0} />
                                 </linearGradient>
                             </defs>
-                            <XAxis dataKey="name" stroke="#666" />
-                            <YAxis stroke="#666" />
+                            <XAxis dataKey="name" stroke="#444" />
+                            <YAxis stroke="#444" />
                             <CartesianGrid strokeDasharray="3 3" stroke="#222" />
-                            <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333' }} />
-                            <Area type="monotone" dataKey="safe" stroke="#00ff9d" fillOpacity={1} fill="url(#colorSafe)" />
-                            <Area type="monotone" dataKey="threats" stroke="#ff003c" fillOpacity={1} fill="url(#colorThreat)" />
+                            <Tooltip contentStyle={{ backgroundColor: '#0d0e12', border: '1px solid #333', borderRadius: '8px' }} />
+                            <Area type="monotone" dataKey="intensity" stroke="var(--secondary-color)" fillOpacity={1} fill="url(#colorIntense)" strokeWidth={3} />
                         </AreaChart>
                     </ResponsiveContainer>
                 </div>
 
                 {/* Risk Distribution Pie */}
-                <div className="glass-panel" style={{ padding: '20px', height: '300px' }}>
-                    <h4>Threat Risk Distribution</h4>
+                <div className="glass-panel" style={{ padding: '20px', height: '350px' }}>
+                    <h4>Blockchain Node Risk Distribution</h4>
                     <div style={{ width: '100%', height: '80%' }}>
                         <ResponsiveContainer>
                             <PieChart>
                                 <Pie
                                     data={riskData}
-                                    innerRadius={60}
-                                    outerRadius={80}
+                                    innerRadius={70}
+                                    outerRadius={90}
                                     paddingAngle={5}
                                     dataKey="value"
                                 >
@@ -106,63 +136,61 @@ const AnalyticsPage = () => {
                                 <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333' }} />
                             </PieChart>
                         </ResponsiveContainer>
-                        <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', fontSize: '0.8rem' }}>
-                            <span style={{ color: COLORS[0] }}>Low</span>
-                            <span style={{ color: COLORS[1] }}>Medium</span>
-                            <span style={{ color: COLORS[2] }}>High</span>
-                            <span style={{ color: COLORS[3] }}>Critical</span>
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', fontSize: '0.8rem', marginTop: '10px' }}>
+                            {riskData.map((d, i) => (
+                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: COLORS[i] }} />
+                                    <span>{d.name}</span>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Secondary Charts */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-
-                {/* Anomaly Detection Scatter Simulation (Bar here for simplicity) */}
-                <div className="glass-panel" style={{ padding: '20px', height: '250px' }}>
-                    <h4>Anomaly Frequency by Hour</h4>
-                    <ResponsiveContainer width="100%" height="90%">
-                        <BarChart data={trafficData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#222" />
-                            <XAxis dataKey="name" stroke="#666" />
-                            <YAxis stroke="#666" />
-                            <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ backgroundColor: '#000', border: '1px solid #333' }} />
-                            <Bar dataKey="risk" fill="#fcee0a" />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </div>
-
-                {/* Recent Raw Logs */}
-                <div className="glass-panel" style={{ padding: '20px', height: '250px', overflowY: 'auto' }}>
-                    <h4>Review Latest Interventions</h4>
-                    <table style={{ width: '100%', fontSize: '0.8rem', textAlign: 'left', borderCollapse: 'collapse' }}>
+            {/* Historical Table */}
+            <div className="glass-panel" style={{ padding: '20px' }}>
+                <h4 style={{ marginBottom: '20px' }}>RAG Context: Decrypted Blockchain Nodes</h4>
+                <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', fontSize: '0.85rem', textAlign: 'left', borderCollapse: 'collapse' }}>
                         <thead>
                             <tr style={{ borderBottom: '1px solid #333', color: '#888' }}>
-                                <th style={{ padding: '10px 0' }}>Time</th>
-                                <th>User</th>
-                                <th>Action</th>
-                                <th>Risk</th>
+                                <th style={{ padding: '15px 10px' }}>Time</th>
+                                <th>Identity</th>
+                                <th>Operation</th>
+                                <th>Entropy (Risk)</th>
+                                <th>Node ID</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {logs.slice(0, 10).map((log) => (
-                                <tr key={log._id} style={{ borderBottom: '1px solid #222' }}>
-                                    <td style={{ padding: '8px 0' }}>{new Date(log.timestamp).toLocaleTimeString()}</td>
+                            {logs.slice(0, 8).map((log) => (
+                                <tr key={log.id} style={{ borderBottom: '1px solid #222' }}>
+                                    <td style={{ padding: '12px 10px' }}>{new Date(log.timestamp).toLocaleTimeString()}</td>
                                     <td>{log.user}</td>
-                                    <td>{log.action.split(' ')[0]}</td>
-                                    <td style={{ color: log.riskLevel === 'Critical' ? '#ff003c' : '#00ff9d' }}>{log.riskLevel}</td>
+                                    <td style={{ color: log.status === 'Denied' ? 'var(--danger-color)' : '#fff' }}>{log.status} {log.action.split(' ')[0]}</td>
+                                    <td style={{ color: log.riskLevel === 'Critical' ? '#ff003c' : log.riskLevel === 'Low' ? '#00ff9d' : '#fcee0a' }}>
+                                        {log.riskLevel}
+                                    </td>
+                                    <td style={{ fontFamily: 'monospace', opacity: 0.5 }}>{Math.random().toString(36).substring(7).toUpperCase()}</td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 </div>
-
             </div>
 
+            <style>{`
+                .pulse { animation: pulse-shadow 2s infinite; }
+                @keyframes pulse-shadow {
+                    0% { filter: drop-shadow(0 0 0px var(--secondary-color)); }
+                    50% { filter: drop-shadow(0 0 10px var(--secondary-color)); }
+                    100% { filter: drop-shadow(0 0 0px var(--secondary-color)); }
+                }
+            `}</style>
         </div>
     );
 };
+
 
 const MetricCard = ({ label, value, delta, color = "#fff", icon }) => (
     <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '5px' }}>

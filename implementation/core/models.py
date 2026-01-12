@@ -14,6 +14,12 @@ class User(AbstractUser):
     # We'll use a CharField. It must be unique.
     private_key = models.CharField(max_length=255, unique=True, null=True, blank=True)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['username']),
+            models.Index(fields=['private_key']),
+        ]
+
     def __str__(self):
         return self.username
 
@@ -33,6 +39,13 @@ class Log(models.Model):
 
     def __str__(self):
         return f"{self.timestamp} - {self.user} - {self.action}"
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['user']),
+            models.Index(fields=['timestamp']),
+            models.Index(fields=['status']),
+        ]
 
 class Block(models.Model):
     index = models.IntegerField()

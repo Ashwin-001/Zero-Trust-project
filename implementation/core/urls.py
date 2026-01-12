@@ -15,4 +15,11 @@ urlpatterns = [
     # Ledger
     path('ledger/chain', views.get_chain, name='get-chain'),
     path('ledger/verify', views.verify_chain, name='verify-chain'),
+
+    # ML & AI
+    path('ml/train', views.train_ml_model, name='train-ml'),
+    path('ml/status', views.get_ml_status, name='ml-status'),
+    path('ai/insight', views.get_ai_insight, name='ai-insight'),
+    path('ai/posture', views.get_posture_insight, name='ai-posture'),
+    path('ai/intelligence', views.get_intelligence, name='ai-intelligence'),
 ]

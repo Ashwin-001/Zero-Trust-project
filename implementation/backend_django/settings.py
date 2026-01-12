@@ -1,5 +1,10 @@
 from pathlib import Path
 from datetime import timedelta
+import os
+from dotenv import load_dotenv
+
+# Load .env file
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -14,7 +19,7 @@ SECRET_KEY = 'django-insecure-s!9$trsfyet+4wqgq+_9*9v984&-m9u!(qpg9anqaknuysztoc
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -40,6 +45,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware', # Check headers
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.gzip.GZipMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -156,3 +162,6 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
     'x-device-info', # Custom header for device info
 ]
+
+# AI Settings
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
