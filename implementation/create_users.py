@@ -1,6 +1,6 @@
 
 import os
-import django
+import django # type: ignore
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend_django.settings')
 django.setup()
