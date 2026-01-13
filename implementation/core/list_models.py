@@ -1,0 +1,22 @@
+from google import genai
+import os
+import sys
+
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
+
+# Try to get API key from Env
+api_key = os.environ.get('GEMINI_API_KEY')
+
+if not api_key:
+    print("Error: GEMINI_API_KEY not set")
+    sys.exit(1)
+
+client = genai.Client(api_key=api_key)
+
+try:
+    print("Listing available models...")
+    for m in client.models.list():
+        print(f"- {m.name}")
+except Exception as e:
+    print(f"Error listing models: {e}")

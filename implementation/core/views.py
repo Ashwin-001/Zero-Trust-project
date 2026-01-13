@@ -1,8 +1,12 @@
 from rest_framework import generics, permissions, status
+from rest_framework.views import APIView
+import requests
+import os
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .models import User, Log, Block
+from .models import User, Log, Block, AIInsight
 from .serializers import UserSerializer, CustomTokenObtainPairSerializer, LogSerializer, BlockSerializer
 from .blockchain_service import blockchain_service
 from .ml_engine import ml_engine
@@ -23,6 +27,77 @@ class RegisterView(generics.CreateAPIView):
 
 class LoginView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+
+class GoogleLoginView(APIView):
+    permission_classes = (permissions.AllowAny,)
+
+    def post(self, request):
+        code = request.data.get('code')
+        
+        # Google Configuration
+        CLIENT_ID = "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com"
+        # Ideally this should be in environment variables
+        CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '') 
+        REDIRECT_URI = "http://localhost:53077/oauth-callback"
+        
+        if not CLIENT_SECRET:
+             # For dev/demo without secret, we can't really do the exchange securely.
+             # However, assuming the user might put it in env later.
+             pass
+
+        # Exchange code for token
+        token_endpoint = "https://oauth2.googleapis.com/token"
+        data = {
+            'code': code,
+            'client_id': CLIENT_ID,
+            'client_secret': CLIENT_SECRET,
+            'redirect_uri': REDIRECT_URI,
+            'grant_type': 'authorization_code'
+        }
+        
+        try:
+             response = requests.post(token_endpoint, data=data)
+             if response.status_code != 200:
+                  return Response({'error': 'Failed to exchange token from Google', 'details': response.json()}, status=status.HTTP_400_BAD_REQUEST)
+             
+             tokens = response.json()
+             access_token = tokens.get('access_token')
+             
+             # Get User Info
+             user_info_resp = requests.get('https://www.googleapis.com/oauth2/v2/userinfo', 
+                                           headers={'Authorization': f'Bearer {access_token}'})
+             
+             if user_info_resp.status_code != 200:
+                  return Response({'error': 'Failed to fetch user info from Google'}, status=status.HTTP_400_BAD_REQUEST)
+                  
+             user_data = user_info_resp.json()
+             email = user_data.get('email')
+             
+             # Find or Create User
+             try:
+                 user = User.objects.get(username=email)
+             except User.DoesNotExist:
+                 user = User.objects.create(
+                     username=email,
+                     email=email,
+                     role='user',
+                     private_key=f"google_{email}" # Placeholder
+                 )
+                 user.set_unusable_password()
+                 user.save()
+            
+             # Generate JWT
+             refresh = RefreshToken.for_user(user)
+             return Response({
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+                'token': str(refresh.access_token),
+                'role': user.role,
+                'username': user.username
+             })
+
+        except Exception as e:
+             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # Protected Views (Zero Trust verified by Middleware)
 @api_view(['GET'])
@@ -56,9 +131,36 @@ def admin_panel(request):
 
 @api_view(['GET'])
 def get_logs(request):
-    logs = Log.objects.all().order_by('-timestamp')[:50]
-    serializer = LogSerializer(logs, many=True)
-    return Response(serializer.data)
+    # Retrieve logs from Blockchain (since SQL logging is disabled)
+    chain = Block.objects.all().order_by('-index')[:50]
+    logs = []
+    
+    for block in chain:
+        payload = block.data.get('payload')
+        block_data = {}
+        if payload:
+            try:
+                block_data = blockchain_service.decrypt_data(payload)
+            except:
+                continue
+        else:
+             block_data = block.data
+             
+        # Check if this block looks like a log entry
+        if 'user' in block_data and 'action' in block_data:
+             log_entry = {
+                 'id': block_data.get('id', block.id),
+                 'user': block_data.get('user'),
+                 'action': block_data.get('action'),
+                 'status': block_data.get('status'),
+                 'risk_level': block_data.get('risk_level', block_data.get('riskLevel', 'Unknown')),
+                 'device_health': block_data.get('device_health', {}),
+                 'timestamp': block_data.get('timestamp', block.timestamp),
+                 'details': block_data.get('details')
+             }
+             logs.append(log_entry)
+             
+    return Response(logs)
 
 # Blockchain Views
 @api_view(['GET'])
@@ -126,29 +228,66 @@ def get_ai_insight(request):
         return Response({'insight': insight})
     except Log.DoesNotExist:
         return Response({'error': 'Log not found'}, status=404)
+class RAGChatView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        # 1. Extract data from frontend
+        data = request.data
+        user = request.user
+        
+        # 2. RAG: Retrieve context from blockchain
+        blocks = Block.objects.all().order_by('-index')[:10]
+        history = []
+        for b in blocks:
+            payload = b.data.get('payload')
+            if payload:
+                try:
+                    history.append(blockchain_service.decrypt_data(payload))
+                except: pass
+        
+        # 3. Call Gemini RAG (passes formulas automatically inside AIService)
+        chat_response = ai_service.analyze_with_rag(data, history)
+        
+        # 4. Forward AI response to frontend (Return immediately)
+        # Note: We still need to do the storage after this, but in a standard request/response 
+        # we return the response. The user said "then encrypted data final push".
+        
+        # 5. Encrypt data and push to MongoDB/Blockchain
+        import uuid
+        log_entry = {
+            'id': str(uuid.uuid4()),
+            'user': user.username,
+            'action': 'RAG Analysis Request',
+            'status': 'Processed',
+            'risk_level': 'Low', # Placeholder, could be calculated
+            'device_health': data.get('device_health', {}),
+            'details': f"AI Response: {chat_response[:100]}...",
+            'timestamp': str(timezone.now())
+        }
+        blockchain_service.add_block(log_entry)
+        
+        return Response({
+            'chat': chat_response,
+            'status': 'Logged to Secure Ledger'
+        })
+
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
 def get_posture_insight(request):
-    # Summary of last 20 logs
-    recent_logs = Log.objects.all().order_by('-timestamp')[:20]
-    summary = "\n".join([f"User: {l.user}, Action: {l.action}, Result: {l.status}, Risk: {l.risk_level}" for l in recent_logs])
-    
-    insight = ai_service.generate_posture_insight(summary)
-    return Response({'insight': insight})
+    # Returning last cached insight but allowing fresh RAG analysis via the POST endpoint
+    try:
+        insight = AIInsight.objects.get(insight_type='posture')
+        return Response(insight.content)
+    except AIInsight.DoesNotExist:
+        return Response({'insight': 'AI Analysis initializing... Please wait.'})
 
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
 def get_intelligence(request):
-    # Fetch blocks for context
-    blocks = Block.objects.all().order_by('-index')[:10]
-    decrypted_context = []
-    for b in blocks:
-        payload = b.data.get('payload')
-        if payload:
-            try:
-                decrypted_context.append(blockchain_service.decrypt_data(payload))
-            except:
-                pass
-    
-    intel = ai_service.get_realtime_intelligence(decrypted_context)
-    return Response(intel)
+    try:
+        intel = AIInsight.objects.get(insight_type='intelligence')
+        return Response(intel.content)
+    except AIInsight.DoesNotExist:
+        return Response({"summary": "AI Initializing", "chart_data": [0,0,0,0,0]})
+

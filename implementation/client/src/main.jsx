@@ -30,10 +30,13 @@ const ProtectedLayout = ({ children }) => {
   );
 };
 
+import OAuthCallback from './components/OAuthCallback';
+
 const App = () => {
   return (
     <Routes>
       <Route path="/" element={<Login />} />
+      <Route path="/oauth-callback" element={<OAuthCallback />} />
       <Route path="/dashboard" element={<ProtectedLayout><Dashboard /></ProtectedLayout>} />
       <Route path="/analytics" element={<ProtectedLayout><AnalyticsPage /></ProtectedLayout>} />
       <Route path="/users" element={<ProtectedLayout><UsersPage /></ProtectedLayout>} />

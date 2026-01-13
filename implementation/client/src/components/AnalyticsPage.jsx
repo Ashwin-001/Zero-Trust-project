@@ -67,7 +67,6 @@ const AnalyticsPage = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                     <h1 className="text-gradient">Zero Trust Security Intelligence</h1>
-                    <p style={{ color: '#888', marginBottom: '30px' }}>Blockchain-verified logs analyzed by Gemini RAG engine.</p>
                 </div>
                 <div style={{ background: 'rgba(0, 240, 255, 0.1)', padding: '10px 20px', borderRadius: '12px', border: '1px solid var(--primary-color)' }}>
                     <div style={{ fontSize: '0.7rem', color: 'var(--primary-color)', fontWeight: 'bold' }}>AI STATUS</div>

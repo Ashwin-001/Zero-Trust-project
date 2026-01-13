@@ -32,7 +32,6 @@ class ZeroTrustMiddleware:
              return self.get_response(request)
 
         # 1. Identity Verification
-        # We manually invoke DRF's JWT Auth to validate the token early
         user = None
         try:
             auth = JWTAuthentication()
@@ -40,9 +39,7 @@ class ZeroTrustMiddleware:
             if user_auth:
                 user = user_auth[0]
                 request.user = user
-        except AuthenticationFailed:
-            pass # Fall through to failure
-        except Exception:
+        except:
             pass
 
         # Parse Device Info
@@ -55,58 +52,25 @@ class ZeroTrustMiddleware:
         request_type = f"{request.method} {path}"
         
         if not user:
-            self.log_access('Unknown', request_type, 'Denied', 'Critical', device_info, 'Missing or Invalid Token')
+            self.log_access('Unknown', request_type, 'Denied', 'Critical', device_info, 'Missing Token')
             return JsonResponse({'error': 'Access Denied: Invalid Token'}, status=401)
 
         # 2. Device Health Check
         health = self.check_device_health(device_info)
-        if not health['isHealthy']:
-            self.log_access(user.username, request_type, 'Denied', 'High', device_info, f"Device Health Failed: {', '.join(health['issues'])}")
-            return JsonResponse({'error': 'Access Denied: Device Health Check Failed', 'issues': health['issues']}, status=403)
+        status_val = 'Granted' if health['isHealthy'] else 'Denied'
+        risk_level = 'Low' if health['isHealthy'] else 'High'
+        details = f"Checks Passed" if health['isHealthy'] else f"Device Issues: {health['issues']}"
 
-        # 3. Risk Scoring (Rule-based)
-        risk_score = 0
-        
-        if device_info.get('location') == 'Unknown':
-            risk_score += 30
-        
-        current_hour = timezone.now().hour
-        if current_hour < 6:
-            risk_score += 20
-        
-        if 'admin-panel' in path and user.role != 'admin':
-            risk_score += 50
-            
-        # 4. ML Anomaly Detection (Statistical)
-        anomaly_boost = ml_engine.predict_anomaly({
-            'hour': current_hour,
-            'risk_level': 'Low', # Initial estimate
-            'status': 'Pending'
-        })
-        risk_score += anomaly_boost
-
-        # Determine Level
-        if risk_score > 70:
-            risk_level = 'Critical'
-        elif risk_score > 40:
-            risk_level = 'High'
-        elif risk_score > 20:
-            risk_level = 'Medium'
-        else:
-            risk_level = 'Low'
-            
-        # Enforcement
-        if risk_score > 60:
-            self.log_access(user.username, request_type, 'Denied', risk_level, device_info, f"Risk Score too high: {risk_score} (Anomaly Boost: {anomaly_boost})")
-            return JsonResponse({'error': 'Access Denied: Risk Threshold Exceeded', 'risk_score': risk_score}, status=403)
-            
-        # Attach risk level to request for views to use
+        # Attach to request
         request.risk_level = risk_level
-        request.risk_score = risk_score
+        request.risk_score = 0 if health['isHealthy'] else 50
         
-        # Log Success
-        self.log_access(user.username, request_type, 'Granted', risk_level, device_info, f'All checks passed. Risk: {risk_score}')
+        # Log to Blockchain (MongoDB)
+        self.log_access(user.username, request_type, status_val, risk_level, device_info, details)
         
+        if not health['isHealthy']:
+            return JsonResponse({'error': 'Device Health Failure', 'issues': health['issues']}, status=403)
+
         return self.get_response(request)
 
     def check_device_health(self, device_info):
@@ -122,24 +86,24 @@ class ZeroTrustMiddleware:
 
     def log_access(self, username, action, status, risk_level, device_health, details):
         try:
-            log = Log.objects.create(
-                user=username,
-                action=action,
-                status=status,
-                risk_level=risk_level,
-                device_health=device_health,
-                details=details
-            )
+            import uuid
             
-            # Add to Blockchain
+            # New Backend Logic Flow (Simplified):
+            # 1. Prepare data (extracted from frontend/request)
             blockchain_data = {
-                'logId': str(log.id),
+                'id': str(uuid.uuid4()),
                 'user': username,
                 'action': action,
                 'status': status,
-                'riskLevel': risk_level,
-                'details': details
+                'risk_level': risk_level,
+                'device_health': device_health,
+                'details': details,
+                'timestamp': str(timezone.now())
             }
+            
+            # 2. Push encrypted data to MongoDB (via Blockchain Service)
+            # The blockchain service handles the encryption and MongoDB/SQLite persistence.
             blockchain_service.add_block(blockchain_data)
+            
         except Exception as e:
             print(f"Logging failed: {e}")

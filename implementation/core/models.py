@@ -10,8 +10,6 @@ class User(AbstractUser):
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='user')
     risk_score = models.IntegerField(default=0)
     # Storing private_key as a unique identifier for login. 
-    # In a real app, this should be hashed, but for this "key" based login simulation we can treat it like a unique token.
-    # We'll use a CharField. It must be unique.
     private_key = models.CharField(max_length=255, unique=True, null=True, blank=True)
 
     class Meta:
@@ -60,3 +58,11 @@ class Block(models.Model):
 
     def __str__(self):
         return f"Block {self.index} - {self.hash[:10]}..."
+
+class AIInsight(models.Model):
+    insight_type = models.CharField(max_length=50) # 'posture' or 'intelligence'
+    content = models.JSONField()
+    timestamp = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"AI {self.insight_type} at {self.timestamp}"

@@ -66,6 +66,18 @@ To create new users programmatically, use the registration endpoint:
 
 **Note**: The `private_key` field is what users will use to authenticate on the login page.
 
+## Google OAuth Integration
+
+The system supports Google OAuth. 
+1. **Frontend Route**: `/oauth-callback` handles the redirect.
+2. **Backend**: `POST /api/auth/google` exchanges the code.
+3. **Requirement**: You MUST set the `GOOGLE_CLIENT_SECRET` environment variable in your backend environment for this to work.
+
+```bash
+export GOOGLE_CLIENT_SECRET="your_client_secret"
+```
+
+
 ---
 
 ## Security Notes

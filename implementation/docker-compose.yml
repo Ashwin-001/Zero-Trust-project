@@ -37,5 +37,19 @@ services:
     depends_on:
       - backend
 
+  gemini_worker:
+    build: .
+    container_name: zero_trust_gemini_worker
+    command: python manage.py start_gemini
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - MONGO_URI=mongodb://db:27017/
+    volumes:
+      - .:/app
+    depends_on:
+      - backend
+
 volumes:
   mongo_data:
