@@ -6,10 +6,5 @@ class CoreConfig(AppConfig):
     name = 'core'
 
     def ready(self):
-        # Import inside ready to avoid circular imports
-        try:
-            from .ml_engine import ml_engine
-            # Training on startup
-            ml_engine.train()
-        except:
-            pass
+        # Ready for startup
+        pass

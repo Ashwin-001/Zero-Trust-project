@@ -21,9 +21,9 @@ const ProtectedLayout = ({ children }) => {
   }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', padding: '20px', gap: '20px', boxSizing: 'border-box' }}>
+    <div style={{ display: 'flex', height: '100vh', background: 'var(--bg-color)', overflow: 'hidden' }}>
       <Sidebar />
-      <div style={{ flex: 1, overflow: 'hidden' }}>
+      <div style={{ flex: 1, padding: '20px 20px 20px 0', overflow: 'hidden' }}>
         {children}
       </div>
     </div>

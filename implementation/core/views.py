@@ -184,7 +184,9 @@ def get_chain(request):
             'data': decrypted,
             'previous_hash': block.previous_hash,
             'hash': block.hash,
-            'nonce': block.nonce
+            'nonce': block.nonce,
+            'signature': block.signature,
+            'merkle_root': block.merkle_root
         })
     return Response(data)
 

@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Terminal, ShieldAlert, ShieldCheck, Zap } from 'lucide-react';
 
 const AuditLog = ({ refreshTrigger }) => {
     const [logs, setLogs] = useState([]);
@@ -29,56 +31,114 @@ const AuditLog = ({ refreshTrigger }) => {
 
     useEffect(() => {
         fetchLogs();
-        const interval = setInterval(fetchLogs, 2000); // Polling
+        const interval = setInterval(fetchLogs, 5000);
         return () => clearInterval(interval);
     }, [refreshTrigger]);
 
     return (
-        <div className="glass-panel" style={{ padding: '20px', height: '100%', overflowY: 'auto' }}>
-            <h3 className="text-gradient">Live Security Logs</h3>
-            <div style={{ maxHeight: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {logs.map((log) => (
-                    <div key={log.id} style={{
-                        padding: '10px',
-                        borderRadius: '8px',
-                        background: log.status === 'Denied' ? 'rgba(255, 0, 60, 0.1)' : 'rgba(0, 255, 157, 0.1)',
-                        borderLeft: `3px solid ${log.status === 'Denied' ? 'var(--danger-color)' : 'var(--success-color)'}`
-                    }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#ccc' }}>
-                            <span>{new Date(log.timestamp).toLocaleTimeString()}</span>
-                            <span style={{ fontWeight: 'bold', color: log.riskLevel === 'Critical' ? 'var(--danger-color)' : 'var(--primary-color)' }}>
-                                Risk: {log.riskLevel}
-                            </span>
-                        </div>
-                        <div style={{ fontWeight: 'bold' }}>{log.action}</div>
-                        <div style={{ fontSize: '0.9rem' }}>User: {log.user}</div>
-                        <div style={{ fontSize: '0.9rem' }}>Result: {log.status}</div>
-                        {log.details && <div style={{ fontSize: '0.8rem', fontStyle: 'italic', marginTop: '5px', color: '#888' }}>{log.details}</div>}
+        <div className="glass-panel" style={{
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            padding: '25px',
+            background: 'var(--panel-bg)'
+        }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+                <Terminal size={20} color="var(--primary)" />
+                <h3 className="text-gradient" style={{ margin: 0, fontSize: '1.1rem' }}>Audit Stream</h3>
+                <div className="shimmer" style={{ flex: 1, height: '1px' }} />
+            </div>
 
-                        <div style={{ marginTop: '8px' }}>
+            <div style={{
+                flex: 1,
+                overflowY: 'auto',
+                paddingRight: '10px'
+            }}>
+                <AnimatePresence initial={false}>
+                    {logs.map((log) => (
+                        <motion.div
+                            key={log.id}
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            transition={{ duration: 0.3 }}
+                            style={{
+                                padding: '15px',
+                                borderRadius: '12px',
+                                background: 'rgba(15, 23, 42, 0.4)',
+                                border: '1px solid rgba(255, 255, 255, 0.05)',
+                                marginBottom: '12px',
+                                borderLeft: `4px solid ${log.status === 'Denied' ? 'var(--danger)' : 'var(--success)'}`
+                            }}
+                        >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.7rem' }}>
+                                <span style={{ color: 'rgba(255,255,255,0.3)', fontFamily: 'JetBrains Mono' }}>
+                                    {new Date(log.timestamp).toLocaleTimeString()}
+                                </span>
+                                <span style={{
+                                    color: log.riskLevel === 'Critical' ? 'var(--danger)' : 'var(--primary)',
+                                    fontWeight: 800,
+                                    textTransform: 'uppercase'
+                                }}>
+                                    {log.riskLevel}
+                                </span>
+                            </div>
+
+                            <div style={{ color: '#fff', fontSize: '0.9rem', fontWeight: 600, marginBottom: '4px' }}>
+                                {log.action}
+                            </div>
+
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '10px' }}>
+                                {log.status === 'Denied' ? <ShieldAlert size={12} color="var(--danger)" /> : <ShieldCheck size={12} color="var(--success)" />}
+                                {log.user} • {log.status}
+                            </div>
+
                             <button
                                 className="btn"
-                                style={{ fontSize: '0.7rem', padding: '4px 8px' }}
                                 onClick={() => analyzeLog(log.id)}
                                 disabled={analyzingId === log.id}
+                                style={{
+                                    padding: '6px 12px',
+                                    fontSize: '0.65rem',
+                                    background: 'rgba(0, 240, 255, 0.03)',
+                                    border: '1px solid rgba(0, 240, 255, 0.1)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '5px'
+                                }}
                             >
-                                {analyzingId === log.id ? 'AI Analyzing...' : 'AI Analyze'}
+                                <Zap size={10} color="var(--primary)" />
+                                {analyzingId === log.id ? 'ANALYZING...' : 'DEEP INSIGHT'}
                             </button>
-                            {aiInsights[log.id] && (
-                                <div style={{
-                                    marginTop: '8px',
-                                    padding: '8px',
-                                    background: 'rgba(255,255,255,0.05)',
-                                    borderRadius: '5px',
-                                    fontSize: '0.75rem',
-                                    borderLeft: '2px solid var(--primary-color)'
-                                }}>
-                                    <strong>Gemini Insight:</strong> {aiInsights[log.id]}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                ))}
+
+                            <AnimatePresence>
+                                {aiInsights[log.id] && (
+                                    <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        style={{
+                                            marginTop: '12px',
+                                            padding: '12px',
+                                            background: 'rgba(0, 240, 255, 0.05)',
+                                            borderRadius: '8px',
+                                            fontSize: '0.8rem',
+                                            color: '#e2e8f0',
+                                            border: '1px solid rgba(0, 240, 255, 0.1)',
+                                            lineHeight: '1.4'
+                                        }}
+                                    >
+                                        <div style={{ fontSize: '0.6rem', color: 'var(--primary)', fontWeight: 800, marginBottom: '4px', textTransform: 'uppercase' }}>Gemini Core Analysis</div>
+                                        {aiInsights[log.id]}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </motion.div>
+                    ))}
+                </AnimatePresence>
+            </div>
+
+            <div style={{ paddingTop: '15px', borderTop: '1px solid rgba(255,255,255,0.05)', fontSize: '0.65rem', color: 'rgba(255,255,255,0.2)', textAlign: 'center' }}>
+                CONTINUOUS FEED ACTIVE • {logs.length} NODES STORED
             </div>
         </div>
     );

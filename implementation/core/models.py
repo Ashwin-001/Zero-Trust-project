@@ -52,6 +52,8 @@ class Block(models.Model):
     previous_hash = models.CharField(max_length=256)
     hash = models.CharField(max_length=256)
     nonce = models.BigIntegerField(default=0)
+    signature = models.TextField(null=True, blank=True) # Digital Signature of the block
+    merkle_root = models.CharField(max_length=256, null=True, blank=True)
 
     class Meta:
         ordering = ['index'] # Sort by index
