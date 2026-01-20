@@ -3,11 +3,14 @@ import api from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link2, ShieldCheck, ShieldAlert, Hexagon, RefreshCw, Cpu, Database, Binary, ExternalLink, Download } from 'lucide-react';
 
+import BiometricVerification from './BiometricVerification';
+
 const BlockchainViewer = () => {
     const [chain, setChain] = useState([]);
     const [valid, setValid] = useState(null);
     const [loading, setLoading] = useState(false);
     const [verifying, setVerifying] = useState(false);
+    const [isVerified, setIsVerified] = useState(false); // New state for biometric check
     const [auditStats, setAuditStats] = useState({ totalNodes: 0, lastVerified: 'Never' });
 
     const fetchChain = async () => {
@@ -51,6 +54,10 @@ const BlockchainViewer = () => {
         const interval = setInterval(fetchChain, 5000);
         return () => clearInterval(interval);
     }, []);
+
+    if (!isVerified) {
+        return <BiometricVerification onVerified={() => setIsVerified(true)} />;
+    }
 
     return (
         <div style={{ padding: '30px', height: 'calc(100vh - 40px)', overflowY: 'auto', paddingBottom: '100px' }}>
@@ -240,6 +247,25 @@ const BlockchainViewer = () => {
                                         <ExternalLink size={14} />
                                     </div>
                                     <div style={{ fontSize: '0.65rem', color: 'var(--primary)', fontWeight: 800, marginBottom: '15px', letterSpacing: '1px' }}>DECRYPTED PAYLOAD LOG</div>
+
+                                    {/* AI Insight Highlight */}
+                                    {block.data.ai_insight && (
+                                        <div style={{
+                                            marginBottom: '15px',
+                                            padding: '15px',
+                                            borderRadius: '8px',
+                                            background: 'rgba(0, 240, 255, 0.1)',
+                                            borderLeft: '3px solid var(--primary)'
+                                        }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: 'var(--primary)', fontWeight: 800, fontSize: '0.7rem' }}>
+                                                <Cpu size={14} /> AI RAG ANALYSIS
+                                            </div>
+                                            <div style={{ color: '#fff', fontSize: '0.85rem', lineHeight: '1.5' }}>
+                                                {block.data.ai_insight}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <pre style={{
                                         margin: 0,
                                         fontSize: '0.85rem',

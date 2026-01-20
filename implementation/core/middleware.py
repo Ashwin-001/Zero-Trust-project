@@ -88,8 +88,8 @@ class ZeroTrustMiddleware:
         try:
             import uuid
             
-            # New Backend Logic Flow (Simplified):
-            # 1. Prepare data (extracted from frontend/request)
+            
+            # 1. Prepare plaintext data
             blockchain_data = {
                 'id': str(uuid.uuid4()),
                 'user': username,
@@ -101,9 +101,29 @@ class ZeroTrustMiddleware:
                 'timestamp': str(timezone.now())
             }
             
-            # 2. Push encrypted data to MongoDB (via Blockchain Service)
-            # The blockchain service handles the encryption and MongoDB/SQLite persistence.
+            # 2. Get historical context (decrypt last 10 blocks for RAG)
+            history = []
+            try:
+                from .models import Block
+                recent_blocks = Block.objects.all().order_by('-index')[:10]
+                for block in recent_blocks:
+                    payload = block.data.get('payload')
+                    if payload:
+                        try:
+                            history.append(blockchain_service.decrypt_data(payload))
+                        except:
+                            pass
+            except:
+                pass
+            
+            # 3. RAG Analysis - DISABLED to save quota
+            # from .ai_service import ai_service
+            # ai_insight = ai_service.analyze_with_rag(blockchain_data, history)
+            # blockchain_data['ai_insight'] = ai_insight
+            
+            # 5. Encrypt and store (blockchain service handles encryption)
             blockchain_service.add_block(blockchain_data)
+
             
         except Exception as e:
             print(f"Logging failed: {e}")

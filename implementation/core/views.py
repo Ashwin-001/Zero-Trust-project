@@ -2,6 +2,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 import requests
 import os
+import datetime
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -165,8 +166,49 @@ def get_logs(request):
 # Blockchain Views
 @api_view(['GET'])
 def get_chain(request):
-    chain = Block.objects.all().order_by('-index')[:20]
     data = []
+    
+    # Priority: Fetch from MongoDB (Immutable Store)
+    if blockchain_service.mongo_active:
+        try:
+            # Fetch last 20 blocks from MongoDB
+            cursor = blockchain_service.collection.find({}, {'_id': 0}).sort("index", -1).limit(20)
+            mongo_chain = list(cursor)
+            
+            for block in mongo_chain:
+                payload_encrypted = block.get('data')
+                
+                # Handle double encapsulation if present (data.payload vs data)
+                if isinstance(payload_encrypted, dict) and 'payload' in payload_encrypted:
+                    payload_encrypted = payload_encrypted['payload']
+                
+                if payload_encrypted:
+                    try:
+                        decrypted = blockchain_service.decrypt_data(payload_encrypted)
+                    except Exception as e:
+                        decrypted = {"error": "Decryption failed", "raw": str(payload_encrypted)}
+                else:
+                    decrypted = block.get('data', {})
+
+                data.append({
+                    'id': str(block.get('index')), # MongoDB doesn't have ID in projection, use index
+                    'index': block.get('index'),
+                    'timestamp': block.get('timestamp') if not isinstance(block.get('timestamp'), float) else datetime.datetime.fromtimestamp(block.get('timestamp')/1000.0).isoformat(),
+                    'data': decrypted,
+                    'previous_hash': block.get('previous_hash'),
+                    'hash': block.get('hash'),
+                    'nonce': block.get('nonce'),
+                    'signature': block.get('signature'),
+                    'merkle_root': block.get('merkle_root'),
+                    'source': 'MONGODB_REPLICA'
+                })
+            return Response(data)
+        except Exception as e:
+            print(f"MongoDB Fetch Error: {e}")
+            # Fallthrough to SQLite
+
+    # Fallback: SQLite
+    chain = Block.objects.all().order_by('-index')[:20]
     for block in chain:
         payload_encrypted = block.data.get('payload')
         if payload_encrypted:
@@ -186,7 +228,8 @@ def get_chain(request):
             'hash': block.hash,
             'nonce': block.nonce,
             'signature': block.signature,
-            'merkle_root': block.merkle_root
+            'merkle_root': block.merkle_root,
+            'source': 'SQLITE_CACHE'
         })
     return Response(data)
 
@@ -237,9 +280,10 @@ class RAGChatView(APIView):
         # 1. Extract data from frontend
         data = request.data
         user = request.user
+        query = data.get('query', 'General Security Assessment')
         
-        # 2. RAG: Retrieve context from blockchain
-        blocks = Block.objects.all().order_by('-index')[:10]
+        # 2. Prepare History for Formula Calculation (decrypted)
+        blocks = Block.objects.all().order_by('-index')[:20]
         history = []
         for b in blocks:
             payload = b.data.get('payload')
@@ -248,31 +292,37 @@ class RAGChatView(APIView):
                     history.append(blockchain_service.decrypt_data(payload))
                 except: pass
         
-        # 3. Call Gemini RAG (passes formulas automatically inside AIService)
-        chat_response = ai_service.analyze_with_rag(data, history)
+        # 3. CUSTOM RAG Analysis (Local LLM + Metrics Formulas)
+        chat_response = ai_service.analyze_with_rag(query, history)
         
-        # 4. Forward AI response to frontend (Return immediately)
-        # Note: We still need to do the storage after this, but in a standard request/response 
-        # we return the response. The user said "then encrypted data final push".
+        # 4. DUAL OUTPUT PATTERN:
         
-        # 5. Encrypt data and push to MongoDB/Blockchain
+        # OUTPUT 1: Immediate Frontend Response
+        frontend_response = {
+            'chat': chat_response,
+            'status': 'success'
+        }
+        
+        # OUTPUT 2: Prepare for Encrypted Storage
         import uuid
+        from django.utils import timezone
         log_entry = {
             'id': str(uuid.uuid4()),
             'user': user.username,
-            'action': 'RAG Analysis Request',
+            'action': f"RAG Query: {query[:50]}...",
             'status': 'Processed',
-            'risk_level': 'Low', # Placeholder, could be calculated
+            'risk_level': 'Low',
             'device_health': data.get('device_health', {}),
-            'details': f"AI Response: {chat_response[:100]}...",
-            'timestamp': str(timezone.now())
+            'details': f"Custom RAG analysis completed locally.",
+            'timestamp': str(timezone.now()),
+            'ai_insight': chat_response
         }
+        
+        # Encrypt and store to blockchain (MongoDB + SQLite)
         blockchain_service.add_block(log_entry)
         
-        return Response({
-            'chat': chat_response,
-            'status': 'Logged to Secure Ledger'
-        })
+        # 5. Return frontend response
+        return Response(frontend_response)
 
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])

@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { User, MoreVertical, ShieldCheck, Mail, Lock, Trash2, Smartphone, AlertTriangle, Fingerprint, ShieldAlert, Key, Activity } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import DeviceFleet from './DeviceFleet';
+import BiometricVerification from './BiometricVerification';
 
 const UsersPage = () => {
+    const [isVerified, setIsVerified] = useState(false);
     const [users, setUsers] = useState([
         { id: 1, name: 'Alice Admin', email: 'admin@corp.com', role: 'CORE_ADMIN', status: 'Active', mfa: true, lastLogin: '2 mins ago', level: 5 },
         { id: 2, name: 'Bob Builder', email: 'bob@corp.com', role: 'DEV_OPS', status: 'Active', mfa: true, lastLogin: '1 hour ago', level: 3 },
@@ -16,6 +19,10 @@ const UsersPage = () => {
         'Suspended': { color: 'var(--text-secondary)', label: 'INACTIVE' },
         'Flagged': { color: 'var(--danger)', label: 'BREACH_RISK' },
     };
+
+    if (!isVerified) {
+        return <BiometricVerification onVerified={() => setIsVerified(true)} />;
+    }
 
     return (
         <div style={{ height: 'calc(100vh - 40px)', overflowY: 'auto', padding: '30px', paddingBottom: '100px' }}>
@@ -76,7 +83,7 @@ const UsersPage = () => {
             </div>
 
             {/* Subject Table */}
-            <div className="glass-panel" style={{ padding: '0' }}>
+            <div className="glass-panel" style={{ padding: '0', marginBottom: '40px' }}>
                 <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0', textAlign: 'left' }}>
                     <thead>
                         <tr style={{ color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '1px', fontSize: '0.7rem' }}>
@@ -156,6 +163,9 @@ const UsersPage = () => {
                     </tbody>
                 </table>
             </div>
+
+            {/* Device Fleet Section */}
+            <DeviceFleet />
         </div>
     );
 };

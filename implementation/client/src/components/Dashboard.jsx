@@ -140,7 +140,11 @@ const Dashboard = () => {
                         <h3 className="text-gradient" style={{ margin: 0 }}>Protected Network Resources</h3>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                        gap: '20px'
+                    }}>
                         {resources.map((res) => (
                             <motion.button
                                 key={res.id}

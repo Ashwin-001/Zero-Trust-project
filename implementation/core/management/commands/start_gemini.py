@@ -34,16 +34,20 @@ class Command(BaseCommand):
                 summary = "\n".join([f"User: {l.get('user')}, Action: {l.get('action')}, Result: {l.get('status')}, Risk: {l.get('risk_level', l.get('riskLevel'))}" for l in recent_logs])
                 
                 self.stdout.write("Generating Posture Insight using Zero Trust RAG Formulas...")
-                posture_content = ai_service.generate_posture_insight(summary)
+                # Use the new analyze_with_rag for a better insight
+                posture_content = ai_service.analyze_with_rag("Summarize the current security posture", recent_logs)
                 AIInsight.objects.update_or_create(
                     insight_type='posture',
                     defaults={'content': {'insight': posture_content}}
                 )
                 
+                # Buffer to prevent burst rate limit
+                time.sleep(5)
+                
                 # 3. Update Intelligence (Realtime)
                 self.stdout.write("Generating Realtime Intelligence...")
                 decrypted_context = recent_logs[:10]
-                intel_content = ai_service.get_realtime_intelligence(decrypted_context)
+                intel_content = ai_service.get_realtime_intelligence()
                 AIInsight.objects.update_or_create(
                     insight_type='intelligence',
                     defaults={'content': intel_content}
@@ -54,5 +58,5 @@ class Command(BaseCommand):
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f"Error in Gemini Loop: {e}"))
             
-            # Wait 30 seconds to avoid rate limiting
-            time.sleep(30)
+            # Wait 60 seconds to avoid rate limiting
+            time.sleep(60)

@@ -67,12 +67,15 @@ body::before {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: var(--primary);
   border-radius: 10px;
+  border: 2px solid var(--bg-color);
+  box-shadow: 0 0 10px var(--primary-glow);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--primary);
+  background: #fff;
+  box-shadow: 0 0 20px var(--primary);
 }
 
 /* Typography */

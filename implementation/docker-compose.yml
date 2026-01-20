@@ -18,8 +18,10 @@ services:
       - .env
     environment:
       - MONGO_URI=mongodb://db:27017/
+      - HF_HOME=/app/.cache/huggingface
     volumes:
       - .:/app
+      - hf_cache:/app/.cache/huggingface
     depends_on:
       - db
 
@@ -46,10 +48,13 @@ services:
       - .env
     environment:
       - MONGO_URI=mongodb://db:27017/
+      - HF_HOME=/app/.cache/huggingface
     volumes:
       - .:/app
+      - hf_cache:/app/.cache/huggingface
     depends_on:
       - backend
 
 volumes:
   mongo_data:
+  hf_cache:
