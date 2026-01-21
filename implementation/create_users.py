@@ -8,29 +8,59 @@ django.setup()
 from core.models import User
 
 def create_users():
-    # Admin
-    if not User.objects.filter(username='admin').exists():
-        User.objects.create_superuser(username='admin', email='admin@example.com', password='password123', role='admin', private_key='pk_admin_secret')
-        print("Created admin user (Superuser, Key: pk_admin_secret)")
-    else:
-        u = User.objects.get(username='admin')
-        u.is_staff = True
-        u.is_superuser = True
-        u.private_key = 'pk_admin_secret'
-        u.set_password('password123') # Ensure password is known
-        u.save()
-        print("Updated admin user permissions and key")
+    users_to_create = [
+        {
+            'username': 'admin',
+            'email': 'admin@example.com',
+            'password': 'password123',
+            'role': 'admin',
+            'private_key': 'pk_admin_secret',
+            'is_superuser': True,
+            'is_staff': True
+        },
+        {
+            'username': 'user',
+            'email': 'user@example.com',
+            'password': 'password123',
+            'role': 'user',
+            'private_key': 'pk_user_secret'
+        },
+        {
+            'username': 'security_officer',
+            'email': 'security@corp.com',
+            'password': 'password123',
+            'role': 'admin',
+            'private_key': 'pk_security_alpha'
+        },
+        {
+            'username': 'guest_auditor',
+            'email': 'auditor@external.com',
+            'password': 'password123',
+            'role': 'guest',
+            'private_key': 'pk_guest_delta'
+        }
+,
+        {
+            'username': 'vatson',
+            'email': 'vatson@example.com',
+            'password': 'myssvm@2022',
+            'role': 'user',
+            'private_key': 'pk_user_1_256'
+        }    ]
 
-
-    # User
-    if not User.objects.filter(username='user').exists():
-        User.objects.create_user(username='user', password='password123', role='user', private_key='pk_user_secret')
-        print("Created standard user (Key: pk_user_secret)")
-    else:
-        u = User.objects.get(username='user')
-        u.private_key = 'pk_user_secret'
-        u.save()
-        print("Updated standard user key")
+    for user_data in users_to_create:
+        username = user_data.pop('username')
+        password = user_data.pop('password')
+        
+        user, created = User.objects.update_or_create(
+            username=username,
+            defaults=user_data
+        )
+        user.set_password(password)
+        user.save()
+        
+        status = "Created" if created else "Updated"
+        print(f"{status} user: {username} (Role: {user.role}, Key: {user.private_key})")
 
 if __name__ == '__main__':
     create_users()

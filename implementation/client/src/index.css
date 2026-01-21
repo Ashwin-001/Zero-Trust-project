@@ -239,10 +239,4 @@ input:focus {
   animation: shimmer 2s infinite;
 }
 
-/* Dashboard Specific Layout */
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: 24px;
-  padding: 24px;
-}
+/* Dashboard styles moved to components/Dashboard/Dashboard.css */

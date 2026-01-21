@@ -14,6 +14,33 @@ from .ml_engine import ml_engine
 from .ai_service import ai_service
 
 # Auth Views
+def update_create_users_script(username, password, private_key, role):
+    script_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'create_users.py')
+    try:
+        with open(script_path, 'r') as f:
+            content = f.read()
+        
+        # Check if user already in list
+        if f"'username': '{username}'" in content:
+            return
+
+        # Find the end of the list
+        list_end_index = content.find('    ]')
+        if list_end_index != -1:
+            new_entry = f""",
+        {{
+            'username': '{username}',
+            'email': '{username}@example.com',
+            'password': '{password}',
+            'role': '{role}',
+            'private_key': '{private_key}'
+        }}"""
+            new_content = content[:list_end_index] + new_entry + content[list_end_index:]
+            with open(script_path, 'w') as f:
+                f.write(new_content)
+    except Exception as e:
+        print(f"Failed to auto-populate script: {e}")
+
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
@@ -22,9 +49,21 @@ class RegisterView(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            self.perform_create(serializer)
-            return Response({'message': 'User registered successfully'}, status=status.HTTP_201_CREATED)
+            user = self.perform_create(serializer)
+            
+            # Auto populate data into create_user.py as requested
+            update_create_users_script(
+                request.data.get('username'),
+                request.data.get('password'),
+                request.data.get('private_key'),
+                request.data.get('role', 'user')
+            )
+            
+            return Response({'message': 'User registered successfully and script updated'}, status=status.HTTP_201_CREATED)
         return Response({'error': 'Registration failed', 'details': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+    def perform_create(self, serializer):
+        return serializer.save()
 
 class LoginView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
@@ -338,8 +377,38 @@ def get_posture_insight(request):
 @permission_classes([permissions.IsAuthenticated])
 def get_intelligence(request):
     try:
-        intel = AIInsight.objects.get(insight_type='intelligence')
-        return Response(intel.content)
-    except AIInsight.DoesNotExist:
-        return Response({"summary": "AI Initializing", "chart_data": [0,0,0,0,0]})
+        # 1. Fetch historical context for RAG
+        blocks = Block.objects.all().order_by('-index')[:30]
+        history = []
+        for b in blocks:
+            payload = b.data.get('payload')
+            if payload:
+                try:
+                    history.append(blockchain_service.decrypt_data(payload))
+                except: pass
+        
+        # 2. Get AI Analysis via RAG
+        summary = ai_service.analyze_with_rag("Summarize the current system security state and policy compliance.", history)
+        
+        # 3. Get Hard Metrics for Charts
+        from .metrics import SecurityMetrics
+        stats = SecurityMetrics.calculate(history)
+        
+        # Map stats to chart data [Accuracy, PC, UAD, APR, RiskSens]
+        chart_data = [
+            float(stats['accuracy'].replace('%', '')),
+            stats['pc_rate'] * 100,
+            float(stats['uad_rate'].replace('%', '')),
+            stats['apr_rate'] * 100,
+            stats['risk_sensitivity'] * 100
+        ]
+
+        return Response({
+            "summary": summary,
+            "chart_data": chart_data,
+            "metrics": stats
+        })
+    except Exception as e:
+        return Response({"summary": f"AI Analysis Engine Calibrating... ({str(e)})", "chart_data": [0,0,0,0,0]})
+
 

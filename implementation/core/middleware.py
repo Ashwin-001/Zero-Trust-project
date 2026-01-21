@@ -12,26 +12,14 @@ class ZeroTrustMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        # Exclude auth, admin, and non-api routes
         path = request.path
-        if not (path.startswith('/api/secure') or path.startswith('/api/ledger')):
+        # Only protect secure endpoints
+        if not path.startswith('/api/secure'):
             return self.get_response(request)
 
-        # Bypass strict checks for logs (read-only monitoring)
-        if '/api/secure/logs' in path:
-             try:
-                 auth = JWTAuthentication()
-                 user_auth = auth.authenticate(request)
-                 if user_auth:
-                     request.user = user_auth[0]
-                 else:
-                     return JsonResponse({'error': 'Access Denied'}, status=401)
-             except Exception:
-                 return JsonResponse({'error': 'Access Denied'}, status=401)
-             
-             return self.get_response(request)
-
-        # 1. Identity Verification
+        # 1. CONTINUOUS VERIFICATION PHASE (RBAC + ABAC)
+        
+        # A. Identity & RBAC Verification
         user = None
         try:
             auth = JWTAuthentication()
@@ -42,54 +30,53 @@ class ZeroTrustMiddleware:
         except:
             pass
 
-        # Parse Device Info
+        if not user:
+            self.log_to_ledger('Unknown', f"RBAC Failure: {path}", 'Denied', 'Critical', {}, 'Unauthorized Access Attempt')
+            return JsonResponse({'error': 'RBAC Verification Failed: No Identity'}, status=401)
+
+        # B. Attribute-Based (ABAC) & Device Verification
         device_info_str = request.headers.get('x-device-info', '{}')
         try:
             device_info = json.loads(device_info_str)
         except:
             device_info = {}
 
-        request_type = f"{request.method} {path}"
+        health = self.verify_attributes(device_info)
         
-        if not user:
-            self.log_access('Unknown', request_type, 'Denied', 'Critical', device_info, 'Missing Token')
-            return JsonResponse({'error': 'Access Denied: Invalid Token'}, status=401)
-
-        # 2. Device Health Check
-        health = self.check_device_health(device_info)
-        status_val = 'Granted' if health['isHealthy'] else 'Denied'
+        # 2. BLOCKCHAIN LEDGER PHASE
+        status_val = 'Granted' if health['isHealthy'] else 'Blocked'
         risk_level = 'Low' if health['isHealthy'] else 'High'
-        details = f"Checks Passed" if health['isHealthy'] else f"Device Issues: {health['issues']}"
+        details = f"RBAC/ABAC Passed" if health['isHealthy'] else f"ABAC Issues: {health['issues']}"
+        
+        # Log every verification event to the Ledger
+        self.log_to_ledger(user.username, f"Access {path}", status_val, risk_level, device_info, details)
 
-        # Attach to request
-        request.risk_level = risk_level
-        request.risk_score = 0 if health['isHealthy'] else 50
-        
-        # Log to Blockchain (MongoDB)
-        self.log_access(user.username, request_type, status_val, risk_level, device_info, details)
-        
         if not health['isHealthy']:
-            return JsonResponse({'error': 'Device Health Failure', 'issues': health['issues']}, status=403)
+            return JsonResponse({
+                'error': 'Continuous Verification Failure (ABAC)',
+                'issues': health['issues'],
+                'verdict': 'Blocked by Policy Engine'
+            }, status=403)
 
+        # 3. ENTERPRISE RESOURCE PHASE
         return self.get_response(request)
 
-    def check_device_health(self, device_info):
+    def verify_attributes(self, device_info):
+        """ABAC logic: Checking device environmental attributes"""
         issues = []
         if not device_info.get('antivirus'):
-            issues.append('Antivirus Disabled')
+            issues.append('Antivirus_Check_Failed')
         if device_info.get('os') == 'Outdated':
-            issues.append('OS Outdated')
+            issues.append('OS_Patch_Level_Critical')
         if device_info.get('ipReputation') == 'Bad':
-            issues.append('Suspicious IP')
+            issues.append('Network_Location_Untrusted')
             
         return {'isHealthy': len(issues) == 0, 'issues': issues}
 
-    def log_access(self, username, action, status, risk_level, device_health, details):
+    def log_to_ledger(self, username, action, status, risk_level, device_health, details):
+        """Writes audit trail to the Immutable Blockchain Ledger"""
         try:
             import uuid
-            
-            
-            # 1. Prepare plaintext data
             blockchain_data = {
                 'id': str(uuid.uuid4()),
                 'user': username,
@@ -98,32 +85,10 @@ class ZeroTrustMiddleware:
                 'risk_level': risk_level,
                 'device_health': device_health,
                 'details': details,
-                'timestamp': str(timezone.now())
+                'timestamp': str(timezone.now()),
+                'protocol': 'Z-TRUST/2.0'
             }
-            
-            # 2. Get historical context (decrypt last 10 blocks for RAG)
-            history = []
-            try:
-                from .models import Block
-                recent_blocks = Block.objects.all().order_by('-index')[:10]
-                for block in recent_blocks:
-                    payload = block.data.get('payload')
-                    if payload:
-                        try:
-                            history.append(blockchain_service.decrypt_data(payload))
-                        except:
-                            pass
-            except:
-                pass
-            
-            # 3. RAG Analysis - DISABLED to save quota
-            # from .ai_service import ai_service
-            # ai_insight = ai_service.analyze_with_rag(blockchain_data, history)
-            # blockchain_data['ai_insight'] = ai_insight
-            
-            # 5. Encrypt and store (blockchain service handles encryption)
             blockchain_service.add_block(blockchain_data)
-
-            
         except Exception as e:
-            print(f"Logging failed: {e}")
+            print(f"Ledger write failed: {e}")
+
