@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import api from '../../services/api';
+import api from '../services/api';
 
 const useDeviceSecurity = (isAuthenticated, onLockout) => {
     const [status, setStatus] = useState('CHECKING'); // CHECKING, ALLOWED, BLOCKED, RESTRICTED
