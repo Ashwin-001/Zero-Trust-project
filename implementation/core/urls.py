@@ -3,6 +3,7 @@ from . import views
 
 urlpatterns = [
     # Auth
+    path('auth/enroll', views.IdentityEnrollmentView.as_view(), name='enroll'),
 
     path('auth/register', views.RegisterView.as_view(), name='register'),
     path('auth/login', views.LoginView.as_view(), name='login'),
@@ -29,4 +30,10 @@ urlpatterns = [
     path('secure/identity-matrix', views.get_identity_matrix, name='identity-matrix'),
     path('quantum/keys', views.get_quantum_keys, name='quantum-keys'),
     path('quantum/protect', views.vault_protect_secret, name='quantum-protect'),
+    
+    # Device Posture
+    path('device/heartbeat', views.device_heartbeat, name='device-heartbeat'),
+    
+    # System Metrics (Exam Version)
+    path('system/metrics', views.get_system_metrics, name='system-metrics'),
 ]

@@ -11,9 +11,22 @@ class RAGEngine:
         Uses SentenceTransformers for local CPU-efficient embeddings.
         """
         logger.info(f"Initializing RAGEngine with model: {model_name}")
-        self.model = SentenceTransformer(model_name)
+        self.model_name = model_name
+        self.model = None
         self.documents = []  # List of dicts: {'text': ..., 'metadata': ...}
         self.embeddings = [] # List of np.arrays
+
+    def _get_model(self):
+        if self.model is None:
+            logger.info(f"Loading RAGEngine model: {self.model_name}")
+            try:
+                self.model = SentenceTransformer(self.model_name)
+            except Exception as e:
+                logger.error(f"Failed to load RAG model: {e}")
+                # Fallback to a dummy model or error out gracefully?
+                # For now just raise to let the caller handle it or retry
+                raise e
+        return self.model
 
     def ingest(self, text, metadata=None):
         """
@@ -23,9 +36,12 @@ class RAGEngine:
             return
             
         print(f"[RAG ENGINE] Phase 2: Indexing local document...")
-        embedding = self.model.encode(text)
-        self.documents.append({'text': text, 'metadata': metadata or {}})
-        self.embeddings.append(embedding)
+        try:
+             embedding = self._get_model().encode(text)
+             self.documents.append({'text': text, 'metadata': metadata or {}})
+             self.embeddings.append(embedding)
+        except Exception:
+             pass
 
     def search(self, query, k=3):
         """
@@ -35,7 +51,10 @@ class RAGEngine:
             return []
 
         print(f"[RAG ENGINE] Phase 3: Vector search for '{query[:30]}...'")
-        query_vec = self.model.encode(query)
+        try:
+            query_vec = self._get_model().encode(query)
+        except:
+            return []
         
         # Convert list of embeddings to matrix
         matrix = np.array(self.embeddings)

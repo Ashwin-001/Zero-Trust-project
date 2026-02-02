@@ -24,13 +24,39 @@ class UserSerializer(serializers.ModelSerializer):
         )
         return user
 
+class IdentityEnrollmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('private_key', 'role')
+    
+    def create(self, validated_data):
+        import uuid
+        # Auto-gen identiy
+        uid = str(uuid.uuid4())[:8]
+        username = f"Identity_{uid}"
+        password = User.objects.make_random_password()
+        
+        # Key generation logic
+        custom_key = validated_data.get('private_key')
+        if not custom_key:
+            # Generate a secure key (simulated)
+            custom_key = f"pk_{uuid.uuid4().hex}"
+            
+        user = User.objects.create_user(
+            username=username,
+            password=password,
+            role=validated_data.get('role', 'user'),
+            private_key=custom_key
+        )
+        return user
+
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Remove default fields
-        self.fields['username'] = serializers.CharField(required=True)
+        self.fields['username'] = serializers.CharField(required=False)
         self.fields['password'] = serializers.CharField(required=False)
         # Support both direct key (backward compatibility) and ZKP Proof
         self.fields['private_key'] = serializers.CharField(required=False)
@@ -41,14 +67,27 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         print(f"DEBUG LOGIN: attrs keys = {list(attrs.keys())}")
         username = (attrs.get('username') or "").strip()
-        private_key = attrs.get('private_key')
+        private_key = (attrs.get('private_key') or "").strip()
         zkp_proof = attrs.get('zkp_proof')
         client_id = attrs.get('client_id')
         
-        try:
-            user = User.objects.get(username=username)
-        except User.DoesNotExist:
-             raise AuthenticationFailed('Subject Identity Not Found')
+        user = None
+
+        # Case 1: Username provided (Old Flow)
+        if username:
+            try:
+                user = User.objects.get(username=username)
+            except User.DoesNotExist:
+                raise AuthenticationFailed('Subject Identity Not Found')
+        
+        # Case 2: No Username, try Private Key Lookup (New Zero Trust Flow)
+        elif private_key:
+             try:
+                 user = User.objects.get(private_key=private_key)
+             except User.DoesNotExist:
+                 raise AuthenticationFailed('Invalid Identity Key')
+        else:
+             raise AuthenticationFailed(' Identity Credentials Required')
 
         # Demo quality-of-life: if the DB user exists but is missing a private_key,
         # auto-repair from `create_users.py` (seed source of truth) to prevent

@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Box, Lock, Unlock, Database, Server, HardDrive, Shield } from 'lucide-react';
 
 const CyberMatrix = () => {

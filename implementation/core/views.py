@@ -92,6 +92,51 @@ class RegisterView(generics.CreateAPIView):
     def perform_create(self, serializer):
         return serializer.save()
 
+class IdentityEnrollmentView(generics.CreateAPIView):
+    queryset = User.objects.all()
+    from .serializers import IdentityEnrollmentSerializer
+    serializer_class = IdentityEnrollmentSerializer
+    permission_classes = (permissions.AllowAny,)
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            user = self.perform_create(serializer)
+            
+            # Persist to create_users.py (Source of Truth)
+            # We need the checks to ensure we don't duplicate logic if it was in serializer
+            # But the serializer didn't call this helper.
+            # Use the actual user object properties
+            
+            # The helper expects password. The generated user has a hashed password in DB, 
+            # or we need to capture the raw password if we want it functional in the script for re-seeding.
+            # However, IdentityEnrollmentSerializer generated a random password but didn't return it or save it in raw form.
+            # We might need to adjust the serializer to allow capturing credentials, 
+            # OR just store a placeholder/hashed one in the script since we rely on Private Key login mostly now.
+            
+            # Let's assume we want to store it. The serializer logic is:
+            # password = User.objects.make_random_password()
+            # user.set_password...
+            # We can't easily get the raw password back from the user object.
+            
+            # PROPOSAL: Move the creation logic here or update serializer to return raw password.
+            # Or just update the script with "managed_identity" as password since key login is the priority.
+            
+            update_create_users_script(
+                user.username,
+                "managed_identity_secret", # Placeholder password as auth is Key-based
+                user.private_key,
+                user.role
+            )
+            
+            return Response({
+                'message': 'Identity Enrolled Successfully', 
+                'private_key': user.private_key,
+                'username': user.username,
+                'role': user.role
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 class LoginView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
@@ -507,3 +552,71 @@ def vault_protect_secret(request):
             'timestamp': time.time()
         }
     })
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def device_heartbeat(request):
+    """
+    Continuous Security Assessment (500ms interval recommended)
+    Checks: IP, Geo, Antivirus status.
+    """
+    data = request.data
+    
+    # 1. Extract Signals
+    ip = data.get('ip', '0.0.0.0')
+    geo = data.get('geo', 'Unknown')
+    antivirus = data.get('antivirus', False) # Boolean
+    
+    # 2. Policy Engine (Simplified)
+    violations = []
+    
+    # Check 1: Anti-Virus must be active
+    if not antivirus:
+        violations.append("Endpoint Protection Disabled")
+        
+    # Check 2: Geo-Fencing (e.g., Allow only US, IN, UK - Mock)
+    blocked_regions = ['Unknown', 'Null Island']
+    if geo in blocked_regions:
+        violations.append(f"Geographic Policy Violation: {geo}")
+        
+    # Check 3: IP Blacklist (Mock)
+    if ip.startswith("10.0.0.99"): # Example malicious IP
+        violations.append("Malicious IP Detected")
+
+    # 3. Determine Access State
+    if violations:
+        status_code = 'BLOCKED'
+        message = "Access Revoked: " + "; ".join(violations)
+    else:
+        status_code = 'ALLOWED'
+        message = "Device Healthy"
+
+    # 4. Minimal Logging (Only log failures to reduce noise)
+    if status_code == 'BLOCKED':
+         import uuid
+         log_entry = {
+             'id': str(uuid.uuid4()),
+             'user': request.user.username,
+             'action': 'HEARTBEAT_CHECK',
+             'status': 'Denied',
+             'risk_level': 'Critical',
+             'details': message,
+             'device_health': data,
+             'timestamp': str(datetime.datetime.now())
+         }
+         blockchain_service.add_block(log_entry)
+
+    return Response({
+        'status': status_code,
+        'message': message,
+        'policy': {
+            'restrict_web_access': False if status_code == 'ALLOWED' else True,
+            'force_logout': True if status_code == 'BLOCKED' else False
+        }
+    })
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def get_system_metrics(request):
+    from .metrics_service import metrics_engine
+    return Response(metrics_engine.get_system_metrics())
