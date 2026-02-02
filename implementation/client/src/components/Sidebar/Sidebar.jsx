@@ -10,7 +10,10 @@ import {
     LogOut,
     Hexagon,
     Terminal,
-    ChevronRight
+    ChevronRight,
+    Cpu,
+    Globe,
+    Box
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -23,6 +26,9 @@ const Sidebar = () => {
         { path: '/users', label: 'Identity Matrix', icon: <Users size={20} /> },
         { path: '/settings', label: 'Security Policy', icon: <Terminal size={20} /> },
         { path: '/blockchain', label: 'Immutable Ledger', icon: <Hexagon size={20} /> },
+        { path: '/quantum-vault', label: 'Quantum Vault', icon: <Cpu size={20} /> },
+        { path: '/threat-map', label: 'Threat Intelligence', icon: <Globe size={20} /> },
+        { path: '/cyber-matrix', label: 'Compute Matrix', icon: <Box size={20} /> },
     ];
 
     return (

@@ -7,19 +7,17 @@ from .models import Log
 from .blockchain_service import blockchain_service
 from .ml_engine import ml_engine
 
+
+from .policy_engine import policy_engine
+
 class ZeroTrustMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
         path = request.path
-        # Only protect secure endpoints
-        if not path.startswith('/api/secure'):
-            return self.get_response(request)
-
-        # 1. CONTINUOUS VERIFICATION PHASE (RBAC + ABAC)
         
-        # A. Identity & RBAC Verification
+        # 1. INITIAL IDENTITY HARVESTING
         user = None
         try:
             auth = JWTAuthentication()
@@ -30,50 +28,56 @@ class ZeroTrustMiddleware:
         except:
             pass
 
-        if not user:
-            self.log_to_ledger('Unknown', f"RBAC Failure: {path}", 'Denied', 'Critical', {}, 'Unauthorized Access Attempt')
-            return JsonResponse({'error': 'RBAC Verification Failed: No Identity'}, status=401)
+        # Public endpoints bypass core verification but still log
+        if not path.startswith('/api/secure') and not path.startswith('/api/admin'):
+             return self.get_response(request)
 
-        # B. Attribute-Based (ABAC) & Device Verification
+        # 2. RBAC VERIFICATION
+        if not user:
+            self.log_to_ledger('Unknown', f"RBAC Failure: {path}", 'Denied', 'Critical', 100, {}, 'Unauthorized Access Attempt')
+            return JsonResponse({'error': 'RBAC Verification Failed: No IdentityFound'}, status=401)
+
+        is_allowed, rbac_msg = policy_engine.check_permissions(user, path)
+        if not is_allowed:
+             self.log_to_ledger(user.username, f"Unauthorized Path: {path}", 'Blocked', 'High', 80, {}, rbac_msg)
+             return JsonResponse({'error': f'RBAC Denied: {rbac_msg}'}, status=403)
+
+        # 3. ABAC & RISK SCORING PHASE
         device_info_str = request.headers.get('x-device-info', '{}')
         try:
             device_info = json.loads(device_info_str)
         except:
             device_info = {}
 
-        health = self.verify_attributes(device_info)
+        risk_analysis = policy_engine.evaluate_risk(user, device_info, path)
+        request.risk_score = risk_analysis['score']
+        request.risk_level = risk_analysis['level']
         
-        # 2. BLOCKCHAIN LEDGER PHASE
-        status_val = 'Granted' if health['isHealthy'] else 'Blocked'
-        risk_level = 'Low' if health['isHealthy'] else 'High'
-        details = f"RBAC/ABAC Passed" if health['isHealthy'] else f"ABAC Issues: {health['issues']}"
-        
-        # Log every verification event to the Ledger
-        self.log_to_ledger(user.username, f"Access {path}", status_val, risk_level, device_info, details)
-
-        if not health['isHealthy']:
+        # 4. ENFORCEMENT PHASE
+        if risk_analysis['score'] > 60:
+            self.log_to_ledger(user.username, f"Access {path}", 'Blocked', risk_analysis['level'], risk_analysis['score'], device_info, f"Policy Violation: {', '.join(risk_analysis['reasons'])}")
             return JsonResponse({
-                'error': 'Continuous Verification Failure (ABAC)',
-                'issues': health['issues'],
-                'verdict': 'Blocked by Policy Engine'
+                'error': 'Terminal Policy Violation',
+                'risk_score': risk_analysis['score'],
+                'risk_level': risk_analysis['level'],
+                'violations': risk_analysis['reasons'],
+                'verdict': 'Blocked by Rule-Based Risk Engine'
             }, status=403)
 
-        # 3. ENTERPRISE RESOURCE PHASE
+        # 5. BLOCKCHAIN LEDGER PHASE (FOR SUCCESS)
+        self.log_to_ledger(
+            user.username, 
+            f"Access {path}", 
+            'Granted', 
+            risk_analysis['level'], 
+            risk_analysis['score'],
+            device_info, 
+            "Identity verified via ZKP Prototype & Multi-Attribute Check"
+        )
+
         return self.get_response(request)
 
-    def verify_attributes(self, device_info):
-        """ABAC logic: Checking device environmental attributes"""
-        issues = []
-        if not device_info.get('antivirus'):
-            issues.append('Antivirus_Check_Failed')
-        if device_info.get('os') == 'Outdated':
-            issues.append('OS_Patch_Level_Critical')
-        if device_info.get('ipReputation') == 'Bad':
-            issues.append('Network_Location_Untrusted')
-            
-        return {'isHealthy': len(issues) == 0, 'issues': issues}
-
-    def log_to_ledger(self, username, action, status, risk_level, device_health, details):
+    def log_to_ledger(self, username, action, status, risk_level, risk_score, device_health, details):
         """Writes audit trail to the Immutable Blockchain Ledger"""
         try:
             import uuid
@@ -83,10 +87,11 @@ class ZeroTrustMiddleware:
                 'action': action,
                 'status': status,
                 'risk_level': risk_level,
+                'risk_score': risk_score,
                 'device_health': device_health,
                 'details': details,
                 'timestamp': str(timezone.now()),
-                'protocol': 'Z-TRUST/2.0'
+                'protocol': 'Z-TRUST/2.5'
             }
             blockchain_service.add_block(blockchain_data)
         except Exception as e:

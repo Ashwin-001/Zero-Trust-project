@@ -85,8 +85,30 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('deviceInfo', JSON.stringify(deviceHealth));
     }, [deviceHealth]);
 
-    const login = async (privateKey) => {
-        const res = await api.post('/auth/login', { private_key: privateKey });
+
+
+    const login = async (username, privateKey) => {
+        console.log("ZKP Auth Start for:", username);
+        // 1. Fetch ZKP Challenge
+        const challengeRes = await api.get(`/auth/challenge?username=${username}`);
+        const { challenge, client_id } = challengeRes.data;
+        console.log("ZKP Challenge Received:", challenge);
+
+        // 2. Generate Proof: SHA256(privateKey + challenge)
+        const combined = (privateKey || "").trim() + challenge;
+        const msgUint8 = new TextEncoder().encode(combined);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const zkpProof = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        console.log("ZKP Proof Generated:", zkpProof.substring(0, 10) + "...");
+
+        // 3. Authenticate with Proof
+        const res = await api.post('/auth/login', {
+            username: (username || "").trim(),
+            zkp_proof: zkpProof,
+            client_id: client_id
+        });
+
         localStorage.setItem('token', res.data.token);
         localStorage.setItem('user', JSON.stringify({ username: res.data.username, role: res.data.role }));
         setUser({ username: res.data.username, role: res.data.role });

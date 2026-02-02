@@ -12,6 +12,33 @@ from .serializers import UserSerializer, CustomTokenObtainPairSerializer, LogSer
 from .blockchain_service import blockchain_service
 from .ml_engine import ml_engine
 from .ai_service import ai_service
+import hashlib
+import uuid
+
+
+from .zkp_store import CHALLENGES
+from .quantum_vault import quantum_vault
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def get_challenge(request):
+    """Zero-Knowledge Proof Challenge Generation"""
+    client_id = request.query_params.get('client_id', str(uuid.uuid4()))
+
+
+    challenge = str(uuid.uuid4())
+    CHALLENGES[client_id] = challenge
+    try:
+        with open('/tmp/zkp_debug.log', 'a') as f:
+            f.write(f"CHALLENGE GEN | CID: {client_id} | STORE: {id(CHALLENGES)}\n")
+    except: pass
+    print(f"DEBUG ZKP: Generated challenge for client_id={client_id} [Store ID: {id(CHALLENGES)}]")
+    return Response({
+        'challenge': challenge,
+        'client_id': client_id,
+        'algorithm': 'SHA256-Proof-of-Knowledge'
+    })
 
 # Auth Views
 def update_create_users_script(username, password, private_key, role):
@@ -215,19 +242,33 @@ def get_chain(request):
             mongo_chain = list(cursor)
             
             for block in mongo_chain:
-                payload_encrypted = block.get('data')
+                payload = block.get('data')
                 
-                # Handle double encapsulation if present (data.payload vs data)
-                if isinstance(payload_encrypted, dict) and 'payload' in payload_encrypted:
-                    payload_encrypted = payload_encrypted['payload']
-                
-                if payload_encrypted:
+                # If it's already a dictionary, it's plaintext (bypass decryption)
+                if isinstance(payload, dict):
+                    # Handle double-encapsulation if it exists
+                    if 'payload' in payload:
+                        payload = payload['payload']
+                    
+                    # If after unpacking it's still a dict, it's plaintext
+                    if isinstance(payload, dict):
+                        decrypted = payload
+                    else:
+                        # It was a dict containing an encrypted payload string
+                        try:
+                            decrypted = blockchain_service.decrypt_data(payload)
+                        except:
+                            decrypted = {"error": "Decryption failed", "raw": str(payload)}
+                elif isinstance(payload, str):
+                    # Direct string payload - attempt decryption
                     try:
-                        decrypted = blockchain_service.decrypt_data(payload_encrypted)
-                    except Exception as e:
-                        decrypted = {"error": "Decryption failed", "raw": str(payload_encrypted)}
+                        decrypted = blockchain_service.decrypt_data(payload)
+                    except:
+                        # Might be a plaintext string
+                        decrypted = {"message": payload}
                 else:
-                    decrypted = block.get('data', {})
+                    decrypted = {"error": "Unknown format", "raw": str(payload)}
+
 
                 data.append({
                     'id': str(block.get('index')), # MongoDB doesn't have ID in projection, use index
@@ -409,6 +450,60 @@ def get_intelligence(request):
             "metrics": stats
         })
     except Exception as e:
-        return Response({"summary": f"AI Analysis Engine Calibrating... ({str(e)})", "chart_data": [0,0,0,0,0]})
+        return Response({
+            "summary": f"AI Analysis Engine Calibrating... ({str(e)})",
+            "chart_data": [0,0,0,0,0]
+        })
+
+@api_view(['GET'])
+
+@permission_classes([permissions.IsAuthenticated])
+def get_identity_matrix(request):
+    """Returns the master list of users from create_users.py"""
+    try:
+        import sys
+        import os
+        
+        # Add parent directory to sys.path to import create_users
+        sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+        from create_users import users_to_create
+        
+        # Strip passwords for security before sending to frontend
+        safe_users = []
+        for u in users_to_create:
+            safe = u.copy()
+            if 'password' in safe:
+                del safe['password']
+            safe_users.append(safe)
+            
+        return Response(safe_users)
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
 
 
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def get_quantum_keys(request):
+    """Generates PQC keys for the authenticated user"""
+    keys = quantum_vault.generate_quantum_keypair(request.user.username)
+    return Response(keys)
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def vault_protect_secret(request):
+    """Encrypts a secret using simulated quantum-resistant logic"""
+    secret = request.data.get('secret')
+    public_key = request.data.get('public_key')
+    if not secret or not public_key:
+        return Response({'error': 'Secret and Public Key required'}, status=400)
+    
+    cipher = quantum_vault.encrypt_secret(secret, public_key)
+    return Response({
+        'cipher': cipher,
+        'metadata': {
+            'layer': 'Lattice-Obfuscation',
+            'timestamp': time.time()
+        }
+    })

@@ -7,54 +7,64 @@ django.setup()
 
 from core.models import User
 
-def create_users():
-    users_to_create = [
-        {
-            'username': 'admin',
-            'email': 'admin@example.com',
-            'password': 'password123',
-            'role': 'admin',
-            'private_key': 'pk_admin_secret',
-            'is_superuser': True,
-            'is_staff': True
-        },
-        {
-            'username': 'user',
-            'email': 'user@example.com',
-            'password': 'password123',
-            'role': 'user',
-            'private_key': 'pk_user_secret'
-        },
-        {
-            'username': 'security_officer',
-            'email': 'security@corp.com',
-            'password': 'password123',
-            'role': 'admin',
-            'private_key': 'pk_security_alpha'
-        },
-        {
-            'username': 'guest_auditor',
-            'email': 'auditor@external.com',
-            'password': 'password123',
-            'role': 'guest',
-            'private_key': 'pk_guest_delta'
-        }
-,
-        {
-            'username': 'vatson',
-            'email': 'vatson@example.com',
-            'password': 'myssvm@2022',
-            'role': 'user',
-            'private_key': 'pk_user_1_256'
-        }    ]
+# Global Identity Matrix (Source of Truth)
+users_to_create = [
+    {
+        'username': 'admin',
+        'email': 'admin@example.com',
+        'password': 'password123',
+        'role': 'admin',
+        'private_key': 'pk_admin_secret',
+        'is_superuser': True,
+        'is_staff': True
+    },
+    {
+        'username': 'user',
+        'email': 'user@example.com',
+        'password': 'password123',
+        'role': 'user',
+        'private_key': 'pk_user_secret'
+    },
+    {
+        'username': 'security_officer',
+        'email': 'security@corp.com',
+        'password': 'password123',
+        'role': 'admin',
+        'private_key': 'pk_security_alpha'
+    },
+    {
+        'username': 'guest_auditor',
+        'email': 'auditor@external.com',
+        'password': 'password123',
+        'role': 'guest',
+        'private_key': 'pk_guest_delta'
+    },
+    {
+        'username': 'myssvm',
+        'email': 'myssvm@example.com',
+        'password': 'myssvm@2022',
+        'role': 'user',
+        'private_key': 'pk_user_1_256'
+    },
+    {
+        'username': 'ajay',
+        'email': 'ajay@example.com',
+        'password': 'password1234',
+        'role': 'user',
+        'private_key': 'pk_3bjs9d7ybkgis76w1ifeh7sr'
+    }
+]
 
+def create_users():
     for user_data in users_to_create:
-        username = user_data.pop('username')
-        password = user_data.pop('password')
+        # Create a copy to avoid modifying the global list
+        data = user_data.copy()
+        username = data.pop('username')
+        password = data.pop('password')
         
         user, created = User.objects.update_or_create(
             username=username,
-            defaults=user_data
+            defaults=data
         )
         user.set_password(password)
         user.save()

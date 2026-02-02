@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { ShieldCheck, Lock, Fingerprint, Cpu, User, Key, Mail } from 'lucide-react';
+import { ShieldCheck, Lock, Fingerprint, Cpu, User, Key, Mail, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import api from '../../services/api';
 import { notifySuccess, notifyError } from '../../services/tost';
@@ -16,9 +16,23 @@ const Signup = () => {
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
+    const generatePrivateKey = () => {
+        const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+        let result = 'pk_';
+        for (let i = 0; i < 24; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        setFormData(prev => ({ ...prev, private_key: result }));
+    };
+
+    useEffect(() => {
+        generatePrivateKey();
+    }, []);
+
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
+
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -159,19 +173,54 @@ const Signup = () => {
                     </div>
 
                     <div style={{ marginBottom: '25px' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase' }}>
-                            <Fingerprint size={12} /> Unique Private Key (Z-TRUST ID)
-                        </label>
-                        <input
-                            type="text"
-                            name="private_key"
-                            placeholder="pk_example_123"
-                            value={formData.private_key}
-                            onChange={handleChange}
-                            disabled={isLoading}
-                            style={{ fontFamily: 'JetBrains Mono' }}
-                        />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase' }}>
+                                <Fingerprint size={12} /> Unique Private Key (Z-TRUST ID)
+                            </label>
+                            <div style={{ fontSize: '0.6rem', color: 'var(--success)', fontWeight: 800, padding: '2px 8px', borderRadius: '4px', background: 'rgba(0, 255, 157, 0.1)', border: '1px solid rgba(0, 255, 157, 0.2)' }}>
+                                AUTO-GENERATED
+                            </div>
+                        </div>
+                        <div style={{ position: 'relative' }}>
+                            <input
+                                type="text"
+                                name="private_key"
+                                placeholder="pk_generating..."
+                                value={formData.private_key}
+                                readOnly
+                                disabled={isLoading}
+                                style={{
+                                    fontFamily: 'JetBrains Mono',
+                                    background: 'rgba(255, 255, 255, 0.02)',
+                                    cursor: 'not-allowed',
+                                    paddingRight: '45px'
+                                }}
+                            />
+                            <motion.button
+                                type="button"
+                                whileTap={{ rotate: 180 }}
+                                onClick={generatePrivateKey}
+                                disabled={isLoading}
+                                style={{
+                                    position: 'absolute',
+                                    right: '10px',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: 'var(--primary)',
+                                    cursor: 'pointer',
+                                    opacity: 0.6,
+                                    display: 'flex',
+                                    alignItems: 'center'
+                                }}
+                                title="Regenerate Security Key"
+                            >
+                                <RefreshCw size={16} />
+                            </motion.button>
+                        </div>
                     </div>
+
 
                     <button
                         type="submit"

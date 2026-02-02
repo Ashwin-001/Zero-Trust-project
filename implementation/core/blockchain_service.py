@@ -41,19 +41,14 @@ class BlockchainService:
                 )
         self.public_key = self.private_key.public_key()
 
-        # MongoDB Connection
-        self.mongo_uri = os.environ.get('MONGO_URI', 'mongodb://db:27017/')
-        try:
-            self.mongo_client = MongoClient(self.mongo_uri, serverSelectionTimeoutMS=2000)
-            self.db = self.mongo_client['zero_trust_blockchain']
-            self.collection = self.db['blocks']
-            self.mongo_client.server_info()
-            self.mongo_active = True
-        except:
-            self.mongo_active = False
-            print("MongoDB not reachable. Blockchain will persist to SQLite only.")
-
+        # Integrated Matrix Ledger (MongoDB)
+        from .db import db_connection
+        self.db_connection = db_connection
+        self.mongo_active = db_connection.active
+        self.collection = db_connection.get_collection('blocks')
+        
         self.initialize_chain()
+
 
     def encrypt_data(self, data):
         data_json = json.dumps(data)

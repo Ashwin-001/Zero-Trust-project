@@ -76,12 +76,26 @@ const AuditLog = ({ refreshTrigger }) => {
                                 <span style={{ color: 'rgba(255,255,255,0.3)', fontFamily: 'JetBrains Mono' }}>
                                     {new Date(log.timestamp).toLocaleTimeString()}
                                 </span>
+
                                 <span style={{
-                                    color: log.riskLevel === 'Critical' ? 'var(--danger)' : 'var(--primary)',
+                                    color: log.risk_level === 'Critical' ? 'var(--danger)' : 'var(--primary)',
                                     fontWeight: 800,
-                                    textTransform: 'uppercase'
+                                    textTransform: 'uppercase',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
                                 }}>
-                                    {log.riskLevel}
+                                    {log.risk_score !== undefined && (
+                                        <div style={{
+                                            background: log.risk_score > 50 ? 'rgba(255, 0, 60, 0.2)' : 'rgba(0, 240, 255, 0.2)',
+                                            padding: '2px 8px',
+                                            borderRadius: '6px',
+                                            fontSize: '0.65rem'
+                                        }}>
+                                            SCORE: {log.risk_score}
+                                        </div>
+                                    )}
+                                    {log.risk_level}
                                 </span>
                             </div>
 

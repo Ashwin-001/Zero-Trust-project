@@ -1,25 +1,54 @@
 import './UsersPage.css';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, MoreVertical, ShieldCheck, Mail, Lock, Trash2, Smartphone, AlertTriangle, Fingerprint, ShieldAlert, Key, Activity } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import DeviceFleet from '../DeviceFleet/DeviceFleet';
 import BiometricVerification from '../BiometricVerification/BiometricVerification';
 
+import api from '../../services/api';
+
 const UsersPage = () => {
     const [isVerified, setIsVerified] = useState(false);
-    const [users, setUsers] = useState([
-        { id: 1, name: 'Alice Admin', email: 'admin@corp.com', role: 'CORE_ADMIN', status: 'Active', mfa: true, lastLogin: '2 mins ago', level: 5 },
-        { id: 2, name: 'Bob Builder', email: 'bob@corp.com', role: 'DEV_OPS', status: 'Active', mfa: true, lastLogin: '1 hour ago', level: 3 },
-        { id: 3, name: 'Charlie Guest', email: 'charlie@external.com', role: 'EXTERNAL', status: 'Suspended', mfa: false, lastLogin: '4 days ago', level: 1 },
-        { id: 4, name: 'Dave Ops', email: 'dave@corp.com', role: 'NETWORK_ENG', status: 'Active', mfa: true, lastLogin: '5 mins ago', level: 4 },
-        { id: 5, name: 'Eve Hacker', email: 'eve@unknown.net', role: 'UNAUTHORIZED', status: 'Flagged', mfa: false, lastLogin: 'Just now', level: 0 },
-    ]);
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchIdentityMatrix = async () => {
+        try {
+            const res = await api.get('/secure/identity-matrix');
+            if (Array.isArray(res.data)) {
+                const mappedUsers = res.data.map((u, idx) => ({
+                    id: idx,
+                    name: (u.username || 'Unknown').charAt(0).toUpperCase() + (u.username || 'Unknown').slice(1),
+                    email: u.email || 'No Email',
+                    role: (u.role || 'user') === 'admin' ? 'CORE_ADMIN' : (u.role || 'user').toUpperCase(),
+                    status: 'Active',
+                    mfa: true,
+                    lastLogin: 'Synchronized',
+                    level: (u.role || 'user') === 'admin' ? 5 : 3,
+                    private_key: u.private_key || 'N/A'
+                }));
+                setUsers(mappedUsers);
+            }
+        } catch (e) {
+            console.error("Matrix Sync Failed", e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
 
     const statusMap = {
         'Active': { color: 'var(--success)', label: 'OPTIMAL' },
         'Suspended': { color: 'var(--text-secondary)', label: 'INACTIVE' },
         'Flagged': { color: 'var(--danger)', label: 'BREACH_RISK' },
     };
+
+    useEffect(() => {
+        if (isVerified) {
+            fetchIdentityMatrix();
+        }
+    }, [isVerified]);
+
 
     if (!isVerified) {
         return <BiometricVerification onVerified={() => setIsVerified(true)} />;

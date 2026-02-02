@@ -5,7 +5,9 @@ import { useNavigate, Link } from 'react-router-dom';
 import { ShieldCheck, Lock, Fingerprint, Cpu } from 'lucide-react';
 import { motion } from 'framer-motion';
 
+
 const Login = () => {
+    const [username, setUsername] = useState('');
     const [privateKey, setPrivateKey] = useState('');
     const { login } = useContext(AuthContext);
     const navigate = useNavigate();
@@ -17,10 +19,14 @@ const Login = () => {
         setIsLoading(true);
         setError('');
         try {
-            await login(privateKey);
+            await login(username, privateKey);
             navigate('/dashboard');
+
+
         } catch (err) {
-            setError('Biometric/Identity Mismatch Detected');
+            console.error("Login Fail Details:", err.response?.data);
+            const errorMsg = err.response?.data?.detail || err.response?.data?.error || JSON.stringify(err.response?.data) || 'Biometric/Identity Mismatch Detected';
+            setError(errorMsg);
             setIsLoading(false);
         }
     };
@@ -112,7 +118,26 @@ const Login = () => {
                     </motion.div>
                 )}
 
+
                 <form onSubmit={handleSubmit}>
+                    <div style={{ marginBottom: '20px', textAlign: 'left' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase' }}>
+                            Subject Identity (Username)
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="entity_id"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            disabled={isLoading}
+                            style={{
+                                height: '50px',
+                                fontSize: '1rem',
+                                color: 'white'
+                            }}
+                        />
+                    </div>
+
                     <div style={{ marginBottom: '25px', textAlign: 'left' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase' }}>
                             <Fingerprint size={14} />
@@ -125,7 +150,7 @@ const Login = () => {
                             onChange={(e) => setPrivateKey(e.target.value)}
                             disabled={isLoading}
                             style={{
-                                height: '54px',
+                                height: '50px',
                                 fontSize: '1.1rem',
                                 letterSpacing: '4px',
                                 textAlign: 'center'

@@ -11,6 +11,9 @@ import AnalyticsPage from './components/AnalyticsPage/AnalyticsPage';
 import UsersPage from './components/UsersPage/UsersPage';
 import PoliciesPage from './components/PoliciesPage/PoliciesPage';
 import BlockchainViewer from './components/BlockchainViewer/BlockchainViewer';
+import QuantumVault from './components/QuantumVault/QuantumVault';
+import ThreatMap from './components/ThreatMap/ThreatMap';
+import CyberMatrix from './components/CyberMatrix/CyberMatrix';
 import './index.css';
 
 const ProtectedLayout = ({ children }) => {
@@ -44,6 +47,9 @@ const App = () => {
       <Route path="/users" element={<ProtectedLayout><UsersPage /></ProtectedLayout>} />
       <Route path="/settings" element={<ProtectedLayout><PoliciesPage /></ProtectedLayout>} />
       <Route path="/blockchain" element={<ProtectedLayout><BlockchainViewer /></ProtectedLayout>} />
+      <Route path="/quantum-vault" element={<ProtectedLayout><QuantumVault /></ProtectedLayout>} />
+      <Route path="/threat-map" element={<ProtectedLayout><ThreatMap /></ProtectedLayout>} />
+      <Route path="/cyber-matrix" element={<ProtectedLayout><CyberMatrix /></ProtectedLayout>} />
     </Routes>
   );
 };

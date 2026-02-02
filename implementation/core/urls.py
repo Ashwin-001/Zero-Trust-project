@@ -3,8 +3,10 @@ from . import views
 
 urlpatterns = [
     # Auth
+
     path('auth/register', views.RegisterView.as_view(), name='register'),
     path('auth/login', views.LoginView.as_view(), name='login'),
+    path('auth/challenge', views.get_challenge, name='challenge'),
     path('auth/google', views.GoogleLoginView.as_view(), name='google-login'),
     
     # Secure
@@ -24,4 +26,7 @@ urlpatterns = [
     path('ai/posture', views.get_posture_insight, name='ai-posture'),
     path('ai/intelligence', views.get_intelligence, name='ai-intelligence'),
     path('ai/rag-chat', views.RAGChatView.as_view(), name='rag-chat'),
+    path('secure/identity-matrix', views.get_identity_matrix, name='identity-matrix'),
+    path('quantum/keys', views.get_quantum_keys, name='quantum-keys'),
+    path('quantum/protect', views.vault_protect_secret, name='quantum-protect'),
 ]
