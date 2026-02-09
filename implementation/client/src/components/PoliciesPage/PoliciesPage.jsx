@@ -2,7 +2,7 @@ import './PoliciesPage.css';
 import React, { useState } from 'react';
 import { ToggleLeft, ToggleRight, Save, RotateCcw, Shield, ShieldAlert, Cpu, Settings as SettingsIcon, Terminal } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { notifySuccess } from '../../services/tost';
+import { notifySuccess } from '../../services/toast';
 
 const PoliciesPage = () => {
     const [settings, setSettings] = useState({

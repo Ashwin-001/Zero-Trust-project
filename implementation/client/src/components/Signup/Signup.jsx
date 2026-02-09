@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { ShieldCheck, Lock, Fingerprint, Cpu, User, Key, Mail, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import api from '../../services/api';
-import { notifySuccess, notifyError } from '../../services/tost';
+import { notifySuccess, notifyError } from '../../services/toast';
 
 const Signup = () => {
     const [formData, setFormData] = useState({

@@ -2,7 +2,7 @@ import './AIAssistant.css';
 import React, { useState } from 'react';
 import { Sparkles, Brain, RefreshCcw, Radar, Terminal, Activity } from 'lucide-react';
 import api from '../../services/api';
-import { notifySuccess, notifyError, notifyInfo } from '../../services/tost';
+import { notifySuccess, notifyError, notifyInfo } from '../../services/toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const AIAssistant = () => {
