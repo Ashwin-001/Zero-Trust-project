@@ -19,7 +19,7 @@ import {
     Server
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { notifySuccess, notifyError, notifyInfo } from '../../services/tost';
+import { notifySuccess, notifyError, notifyInfo } from '../../services/toast';
 
 const Dashboard = () => {
     const { user } = useContext(AuthContext);
@@ -33,7 +33,10 @@ const Dashboard = () => {
         try {
             const res = await api.get('/secure/logs');
             setLogs(res.data);
-        } catch (e) { }
+        } catch (e) {
+            console.error("Error fetching logs for analytics:", e);
+            // Optionally, set an error state or notify the user
+        }
     };
 
     React.useEffect(() => {

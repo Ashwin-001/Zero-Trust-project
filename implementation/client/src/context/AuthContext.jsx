@@ -89,36 +89,49 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (username, privateKey) => {
         console.log("ZKP Auth Start for:", username);
-        // 1. Fetch ZKP Challenge
-        const challengeRes = await api.get(`/auth/challenge?username=${username}`);
-        const { challenge, client_id } = challengeRes.data;
-        console.log("ZKP Challenge Received:", challenge);
+        try {
+            // 1. Fetch ZKP Challenge
+            const challengeRes = await api.get(`/auth/challenge?username=${username}`);
+            const { challenge, client_id } = challengeRes.data;
+            console.log("ZKP Challenge Received:", challenge);
 
-        // 2. Generate Proof: SHA256(privateKey + challenge)
-        const combined = (privateKey || "").trim() + challenge;
-        const msgUint8 = new TextEncoder().encode(combined);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const zkpProof = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        console.log("ZKP Proof Generated:", zkpProof.substring(0, 10) + "...");
+            // 2. Generate Proof: SHA256(privateKey + challenge)
+            const combined = (privateKey || "").trim() + challenge;
+            const msgUint8 = new TextEncoder().encode(combined);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const zkpProof = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            console.log("ZKP Proof Generated:", zkpProof.substring(0, 10) + "...");
 
-        // 3. Authenticate with Proof
-        const res = await api.post('/auth/login', {
-            username: (username || "").trim(),
-            zkp_proof: zkpProof,
-            client_id: client_id
-        });
+            // 3. Authenticate with Proof
+            const res = await api.post('/auth/login', {
+                username: (username || "").trim(),
+                zkp_proof: zkpProof,
+                client_id: client_id
+            });
 
-        localStorage.setItem('token', res.data.token);
-        localStorage.setItem('user', JSON.stringify({ username: res.data.username, role: res.data.role }));
-        setUser({ username: res.data.username, role: res.data.role });
+            localStorage.setItem('token', res.data.token);
+            localStorage.setItem('user', JSON.stringify({ username: res.data.username, role: res.data.role }));
+            setUser({ username: res.data.username, role: res.data.role });
+            return res.data; // Return data on success
+        } catch (error) {
+            console.error("Login API call failed:", error.response?.data || error.message);
+            // Re-throw the error so the calling component can catch and display it
+            throw error;
+        }
     };
 
     const googleLogin = async (code) => {
-        const res = await api.post('/auth/google', { code });
-        localStorage.setItem('token', res.data.token);
-        localStorage.setItem('user', JSON.stringify({ username: res.data.username, role: res.data.role }));
-        setUser({ username: res.data.username, role: res.data.role });
+        try {
+            const res = await api.post('/auth/google', { code });
+            localStorage.setItem('token', res.data.token);
+            localStorage.setItem('user', JSON.stringify({ username: res.data.username, role: res.data.role }));
+            setUser({ username: res.data.username, role: res.data.role });
+            return res.data; // Return data on success
+        } catch (error) {
+            console.error("Google Login API call failed:", error.response?.data || error.message);
+            throw error; // Re-throw the error
+        }
     };
 
     const logout = () => {

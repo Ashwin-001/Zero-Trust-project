@@ -14,6 +14,7 @@ from .ml_engine import ml_engine
 from .ai_service import ai_service
 import hashlib
 import uuid
+from pymongo.errors import ConnectionError
 
 
 from .zkp_store import CHALLENGES
@@ -41,32 +42,7 @@ def get_challenge(request):
     })
 
 # Auth Views
-def update_create_users_script(username, password, private_key, role):
-    script_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'create_users.py')
-    try:
-        with open(script_path, 'r') as f:
-            content = f.read()
-        
-        # Check if user already in list
-        if f"'username': '{username}'" in content:
-            return
 
-        # Find the end of the list
-        list_end_index = content.find('    ]')
-        if list_end_index != -1:
-            new_entry = f""",
-        {{
-            'username': '{username}',
-            'email': '{username}@example.com',
-            'password': '{password}',
-            'role': '{role}',
-            'private_key': '{private_key}'
-        }}"""
-            new_content = content[:list_end_index] + new_entry + content[list_end_index:]
-            with open(script_path, 'w') as f:
-                f.write(new_content)
-    except Exception as e:
-        print(f"Failed to auto-populate script: {e}")
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -78,15 +54,7 @@ class RegisterView(generics.CreateAPIView):
         if serializer.is_valid():
             user = self.perform_create(serializer)
             
-            # Auto populate data into create_user.py as requested
-            update_create_users_script(
-                request.data.get('username'),
-                request.data.get('password'),
-                request.data.get('private_key'),
-                request.data.get('role', 'user')
-            )
-            
-            return Response({'message': 'User registered successfully and script updated'}, status=status.HTTP_201_CREATED)
+            return Response({'message': 'User registered successfully'}, status=status.HTTP_201_CREATED)
         return Response({'error': 'Registration failed', 'details': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
     def perform_create(self, serializer):
@@ -101,33 +69,7 @@ class IdentityEnrollmentView(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            user = self.perform_create(serializer)
-            
-            # Persist to create_users.py (Source of Truth)
-            # We need the checks to ensure we don't duplicate logic if it was in serializer
-            # But the serializer didn't call this helper.
-            # Use the actual user object properties
-            
-            # The helper expects password. The generated user has a hashed password in DB, 
-            # or we need to capture the raw password if we want it functional in the script for re-seeding.
-            # However, IdentityEnrollmentSerializer generated a random password but didn't return it or save it in raw form.
-            # We might need to adjust the serializer to allow capturing credentials, 
-            # OR just store a placeholder/hashed one in the script since we rely on Private Key login mostly now.
-            
-            # Let's assume we want to store it. The serializer logic is:
-            # password = User.objects.make_random_password()
-            # user.set_password...
-            # We can't easily get the raw password back from the user object.
-            
-            # PROPOSAL: Move the creation logic here or update serializer to return raw password.
-            # Or just update the script with "managed_identity" as password since key login is the priority.
-            
-            update_create_users_script(
-                user.username,
-                "managed_identity_secret", # Placeholder password as auth is Key-based
-                user.private_key,
-                user.role
-            )
+            user = serializer.save()
             
             return Response({
                 'message': 'Identity Enrolled Successfully', 
@@ -148,14 +90,11 @@ class GoogleLoginView(APIView):
         
         # Google Configuration
         CLIENT_ID = "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com"
-        # Ideally this should be in environment variables
-        CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '') 
+        CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
         REDIRECT_URI = "http://localhost:53077/oauth-callback"
         
         if not CLIENT_SECRET:
-             # For dev/demo without secret, we can't really do the exchange securely.
-             # However, assuming the user might put it in env later.
-             pass
+            return Response({'error': 'Google OAuth is not configured. The GOOGLE_CLIENT_SECRET environment variable is not set.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         # Exchange code for token
         token_endpoint = "https://oauth2.googleapis.com/token"
@@ -168,48 +107,54 @@ class GoogleLoginView(APIView):
         }
         
         try:
-             response = requests.post(token_endpoint, data=data)
-             if response.status_code != 200:
-                  return Response({'error': 'Failed to exchange token from Google', 'details': response.json()}, status=status.HTTP_400_BAD_REQUEST)
-             
-             tokens = response.json()
-             access_token = tokens.get('access_token')
-             
-             # Get User Info
-             user_info_resp = requests.get('https://www.googleapis.com/oauth2/v2/userinfo', 
-                                           headers={'Authorization': f'Bearer {access_token}'})
-             
-             if user_info_resp.status_code != 200:
-                  return Response({'error': 'Failed to fetch user info from Google'}, status=status.HTTP_400_BAD_REQUEST)
-                  
-             user_data = user_info_resp.json()
-             email = user_data.get('email')
-             
-             # Find or Create User
-             try:
-                 user = User.objects.get(username=email)
-             except User.DoesNotExist:
-                 user = User.objects.create(
-                     username=email,
-                     email=email,
-                     role='user',
-                     private_key=f"google_{email}" # Placeholder
-                 )
-                 user.set_unusable_password()
-                 user.save()
+            response = requests.post(token_endpoint, data=data)
+            response.raise_for_status() # Raise an HTTPError for bad responses (4xx or 5xx)
             
-             # Generate JWT
-             refresh = RefreshToken.for_user(user)
-             return Response({
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
-                'token': str(refresh.access_token),
-                'role': user.role,
-                'username': user.username
-             })
+            tokens = response.json()
+            access_token = tokens.get('access_token')
+            
+            # Get User Info
+            user_info_resp = requests.get('https://www.googleapis.com/oauth2/v2/userinfo', 
+                                          headers={'Authorization': f'Bearer {access_token}'})
+            user_info_resp.raise_for_status() # Raise an HTTPError for bad responses
+            
+            user_data = user_info_resp.json()
+            email = user_data.get('email')
+            
+            # Find or Create User
+            try:
+                user = User.objects.get(username=email)
+            except User.DoesNotExist:
+                user = User.objects.create(
+                    username=email,
+                    email=email,
+                    role='user',
+                    private_key=f"google_{email}" # Placeholder
+                )
+                user.set_unusable_password()
+                user.save()
+            
+            # Generate JWT
+            refresh = RefreshToken.for_user(user)
+            return Response({
+               'refresh': str(refresh),
+               'access': str(refresh.access_token),
+               'token': str(refresh.access_token),
+               'role': user.role,
+               'username': user.username
+            })
 
+        except requests.exceptions.RequestException as e:
+            # Handle errors from Google API calls
+            status_code = e.response.status_code if e.response is not None else status.HTTP_500_INTERNAL_SERVER_ERROR
+            error_details = e.response.json() if e.response is not None else {'detail': str(e)}
+            return Response({
+                'error': f'Google API request failed: {e.response.reason if e.response else "Unknown error"}',
+                'details': error_details
+            }, status=status_code)
         except Exception as e:
-             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            # Catch any other unexpected errors during the process
+            return Response({'error': 'An unexpected error occurred during Google login', 'details': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # Protected Views (Zero Trust verified by Middleware)
 @api_view(['GET'])
@@ -302,17 +247,17 @@ def get_chain(request):
                         # It was a dict containing an encrypted payload string
                         try:
                             decrypted = blockchain_service.decrypt_data(payload)
-                        except:
-                            decrypted = {"error": "Decryption failed", "raw": str(payload)}
+                        except Exception: # Catch specific decryption error if possible, or log
+                            decrypted = {"error": "Decryption failed", "raw": "Encrypted payload could not be decrypted."}
                 elif isinstance(payload, str):
                     # Direct string payload - attempt decryption
                     try:
                         decrypted = blockchain_service.decrypt_data(payload)
-                    except:
-                        # Might be a plaintext string
+                    except Exception: # Catch specific decryption error if possible, or log
+                        # Might be a plaintext string that failed decryption (e.g., malformed)
                         decrypted = {"message": payload}
                 else:
-                    decrypted = {"error": "Unknown format", "raw": str(payload)}
+                    decrypted = {"error": "Unknown format", "raw": "Payload is not a dictionary or string."}
 
 
                 data.append({
@@ -328,9 +273,14 @@ def get_chain(request):
                     'source': 'MONGODB_REPLICA'
                 })
             return Response(data)
-        except Exception as e:
+        except ConnectionError as e: # Specific for MongoDB connection issues
+            print(f"MongoDB Connection Error: {e}")
+            # Fallthrough to SQLite or return specific error
+            return Response({'error': 'Failed to connect to MongoDB', 'details': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e: # General catch for other unexpected MongoDB errors
             print(f"MongoDB Fetch Error: {e}")
             # Fallthrough to SQLite
+            return Response({'error': 'An unexpected error occurred while fetching from MongoDB', 'details': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     # Fallback: SQLite
     chain = Block.objects.all().order_by('-index')[:20]
@@ -415,7 +365,10 @@ class RAGChatView(APIView):
             if payload:
                 try:
                     history.append(blockchain_service.decrypt_data(payload))
-                except: pass
+                except Exception as e:
+                    print(f"Error decrypting block payload in RAGChatView: {e}")
+                    # Optionally, append a placeholder or specific error message to history
+                    history.append({"error": "Decryption failed", "details": str(e)})
         
         # 3. CUSTOM RAG Analysis (Local LLM + Metrics Formulas)
         chat_response = ai_service.analyze_with_rag(query, history)
@@ -471,7 +424,10 @@ def get_intelligence(request):
             if payload:
                 try:
                     history.append(blockchain_service.decrypt_data(payload))
-                except: pass
+                except Exception as e:
+                    print(f"Error decrypting block payload in get_intelligence: {e}")
+                    # Optionally, append a placeholder or specific error message to history
+                    history.append({"error": "Decryption failed", "details": str(e)})
         
         # 2. Get AI Analysis via RAG
         summary = ai_service.analyze_with_rag("Summarize the current system security state and policy compliance.", history)
@@ -511,7 +467,13 @@ def get_identity_matrix(request):
         
         # Add parent directory to sys.path to import create_users
         sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-        from create_users import users_to_create
+        
+        try:
+            from create_users import users_to_create
+        except ImportError:
+            return Response({"error": "create_users.py not found or has an error. Ensure it's in the correct path."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as import_e:
+            return Response({"error": f"Error loading create_users.py: {str(import_e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
         # Strip passwords for security before sending to frontend
         safe_users = []
@@ -523,7 +485,8 @@ def get_identity_matrix(request):
             
         return Response(safe_users)
     except Exception as e:
-        return Response({"error": str(e)}, status=500)
+        # Catch any other unexpected errors during the process
+        return Response({"error": f"An unexpected error occurred: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 

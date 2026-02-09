@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
+    'csp', # Django CSP
 
     # Local
     'core',
@@ -44,6 +45,8 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware', # Check headers
     'django.middleware.security.SecurityMiddleware',
+    'csp.middleware.CspMiddleware', # CSP Middleware
+    'core.security_middleware.CustomSecurityHeadersMiddleware', # Custom Security Headers Middleware
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.gzip.GZipMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -53,6 +56,27 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'core.middleware.ZeroTrustMiddleware',
 ]
+
+# Content Security Policy (CSP)
+# This is a basic configuration. For production, you would need to fine-tune these directives
+# based on all the resources your frontend loads (scripts, styles, images, fonts, etc.).
+# 'self' allows resources from the same origin.
+# For local development with Vite, you often need to allow 'unsafe-inline' for styles and scripts
+# and 'localhost' or your dev server's address for scripts.
+CSP_DEFAULT_SRC = ("'self'",)
+CSP_SCRIPT_SRC = ("'self'", "'unsafe-inline'", "http://localhost:*", "https://localhost:*")
+CSP_STYLE_SRC = ("'self'", "'unsafe-inline'", "http://localhost:*", "https://localhost:*")
+CSP_IMG_SRC = ("'self'", "data:")
+CSP_FONT_SRC = ("'self'", "data:")
+CSP_CONNECT_SRC = ("'self'", "http://localhost:*", "https://localhost:*")
+CSP_OBJECT_SRC = ("'none'",)
+CSP_BASE_URI = ("'self'",)
+CSP_FRAME_ANCESTORS = ("'self'",)
+CSP_FORM_ACTION = ("'self'",)
+CSP_BLOCK_ALL_MIXED_CONTENT = True
+# Uncomment in production after testing
+# CSP_REPORT_ONLY = False
+# CSP_REPORT_URI = "/csp-report/" # You would need to set up an endpoint to receive these reports
 
 ROOT_URLCONF = 'backend_django.urls'
 

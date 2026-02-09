@@ -24,17 +24,27 @@ class UserSerializer(serializers.ModelSerializer):
         )
         return user
 
+    def validate_private_key(self, value):
+        if not value or len(value) < 20: # Example minimum length
+            raise serializers.ValidationError("Private key must be at least 20 characters long.")
+        return value
+
 class IdentityEnrollmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('private_key', 'role')
+        extra_kwargs = {
+            'private_key': {'required': False, 'allow_blank': True},
+            'role': {'required': False}
+        }
     
     def create(self, validated_data):
         import uuid
+        from django.utils.crypto import get_random_string
         # Auto-gen identiy
         uid = str(uuid.uuid4())[:8]
         username = f"Identity_{uid}"
-        password = User.objects.make_random_password()
+        password = get_random_string(length=12)
         
         # Key generation logic
         custom_key = validated_data.get('private_key')
@@ -42,13 +52,24 @@ class IdentityEnrollmentSerializer(serializers.ModelSerializer):
             # Generate a secure key (simulated)
             custom_key = f"pk_{uuid.uuid4().hex}"
             
-        user = User.objects.create_user(
-            username=username,
-            password=password,
-            role=validated_data.get('role', 'user'),
-            private_key=custom_key
-        )
+        try:
+            user = User.objects.create_user(
+                username=username,
+                password=password,
+                role=validated_data.get('role', 'user'),
+                private_key=custom_key
+            )
+        except Exception as e:
+            if "private_key" in str(e) or "unique constraint" in str(e).lower():
+                raise serializers.ValidationError({"private_key": ["This key is already registered. Please login or choose another."]})
+            raise e
         return user
+
+    def validate_private_key(self, value):
+        # Allow blank for auto-generation, but if provided, validate length
+        if value and len(value) < 20: # Example minimum length
+            raise serializers.ValidationError("Private key must be at least 20 characters long if provided.")
+        return value
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -88,33 +109,6 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                  raise AuthenticationFailed('Invalid Identity Key')
         else:
              raise AuthenticationFailed(' Identity Credentials Required')
-
-        # Demo quality-of-life: if the DB user exists but is missing a private_key,
-        # auto-repair from `create_users.py` (seed source of truth) to prevent
-        # ZKP/identity mismatches for known demo identities like `admin`.
-        if not (user.private_key or "").strip():
-            try:
-                import sys, os
-                sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-                from create_users import users_to_create  # type: ignore
-                seeded = next((u for u in users_to_create if (u.get('username') or "").strip() == username), None)
-                seeded_key = (seeded.get('private_key') or "").strip() if seeded else ""
-                if seeded_key:
-                    user.private_key = seeded_key
-                    if seeded.get('role'):
-                        user.role = seeded.get('role')
-                    if 'is_staff' in seeded:
-                        user.is_staff = bool(seeded.get('is_staff'))
-                    if 'is_superuser' in seeded:
-                        user.is_superuser = bool(seeded.get('is_superuser'))
-                    user.save(update_fields=['private_key', 'role', 'is_staff', 'is_superuser'])
-            except Exception:
-                # If anything goes wrong, fall through to normal auth errors below.
-                pass
-
-
-
-
 
         # ZKP PROTOTYPE LOGIC
         if zkp_proof and client_id:

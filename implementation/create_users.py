@@ -8,11 +8,14 @@ django.setup()
 from core.models import User
 
 # Global Identity Matrix (Source of Truth)
+# IMPORTANT: The 'password' field is for initial database seeding only.
+# In a production environment, these should be set to a secure, random value
+# and users should be forced to change them on first login.
 users_to_create = [
     {
         'username': 'admin',
         'email': 'admin@example.com',
-        'password': 'password123',
+        'password': 'SET_A_SECURE_PASSWORD_HERE',
         'role': 'admin',
         'private_key': 'pk_admin_secret',
         'is_superuser': True,
@@ -21,35 +24,35 @@ users_to_create = [
     {
         'username': 'user',
         'email': 'user@example.com',
-        'password': 'password123',
+        'password': 'SET_A_SECURE_PASSWORD_HERE',
         'role': 'user',
         'private_key': 'pk_user_secret'
     },
     {
         'username': 'security_officer',
         'email': 'security@corp.com',
-        'password': 'password123',
+        'password': 'SET_A_SECURE_PASSWORD_HERE',
         'role': 'admin',
         'private_key': 'pk_security_alpha'
     },
     {
         'username': 'guest_auditor',
         'email': 'auditor@external.com',
-        'password': 'password123',
+        'password': 'SET_A_SECURE_PASSWORD_HERE',
         'role': 'guest',
         'private_key': 'pk_guest_delta'
     },
     {
         'username': 'myssvm',
         'email': 'myssvm@example.com',
-        'password': 'myssvm@2022',
+        'password': 'SET_A_SECURE_PASSWORD_HERE',
         'role': 'user',
         'private_key': 'pk_user_1_256'
     },
     {
         'username': 'ajay',
         'email': 'ajay@example.com',
-        'password': 'password1234',
+        'password': 'SET_A_SECURE_PASSWORD_HERE',
         'role': 'user',
         'private_key': 'pk_3bjs9d7ybkgis76w1ifeh7sr'
     }
