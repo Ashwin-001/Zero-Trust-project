@@ -14,7 +14,7 @@ from .ml_engine import ml_engine
 from .ai_service import ai_service
 import hashlib
 import uuid
-from pymongo.errors import ConnectionError
+from pymongo.errors import PyMongoError
 
 
 from .zkp_store import CHALLENGES

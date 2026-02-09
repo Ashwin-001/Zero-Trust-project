@@ -45,7 +45,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware', # Check headers
     'django.middleware.security.SecurityMiddleware',
-    'csp.middleware.CspMiddleware', # CSP Middleware
+    'csp.middleware.CSPMiddleware', # CSP Middleware
     'core.security_middleware.CustomSecurityHeadersMiddleware', # Custom Security Headers Middleware
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.gzip.GZipMiddleware',
@@ -63,17 +63,22 @@ MIDDLEWARE = [
 # 'self' allows resources from the same origin.
 # For local development with Vite, you often need to allow 'unsafe-inline' for styles and scripts
 # and 'localhost' or your dev server's address for scripts.
-CSP_DEFAULT_SRC = ("'self'",)
-CSP_SCRIPT_SRC = ("'self'", "'unsafe-inline'", "http://localhost:*", "https://localhost:*")
-CSP_STYLE_SRC = ("'self'", "'unsafe-inline'", "http://localhost:*", "https://localhost:*")
-CSP_IMG_SRC = ("'self'", "data:")
-CSP_FONT_SRC = ("'self'", "data:")
-CSP_CONNECT_SRC = ("'self'", "http://localhost:*", "https://localhost:*")
-CSP_OBJECT_SRC = ("'none'",)
-CSP_BASE_URI = ("'self'",)
-CSP_FRAME_ANCESTORS = ("'self'",)
-CSP_FORM_ACTION = ("'self'",)
-CSP_BLOCK_ALL_MIXED_CONTENT = True
+CONTENT_SECURITY_POLICY = {
+    "DIRECTIVES": {
+        "default-src": ("'self'",),
+        "script-src": ("'self'", "'unsafe-inline'", "http://localhost:*", "https://localhost:*"),
+        "style-src": ("'self'", "'unsafe-inline'", "http://localhost:*", "https://localhost:*"),
+        "img-src": ("'self'", "data:"),
+        "font-src": ("'self'", "data:"),
+        "connect-src": ("'self'", "http://localhost:*", "https://localhost:*"),
+        "object-src": ("'none'",),
+        "base-uri": ("'self'",),
+        "form-action": ("'self'",),
+        "frame-ancestors": ("'self'",),
+        "block-all-mixed-content": True,
+    }
+}
+
 # Uncomment in production after testing
 # CSP_REPORT_ONLY = False
 # CSP_REPORT_URI = "/csp-report/" # You would need to set up an endpoint to receive these reports
