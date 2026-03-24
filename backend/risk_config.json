@@ -1,0 +1,50 @@
+{
+  "profiles": {
+    "balanced": {
+      "risk_factors": {
+        "login_attempts": 0.15,
+        "time_of_access": 0.1,
+        "location_change": 0.15,
+        "device_risk": 0.2,
+        "resource_sensitivity": 0.15,
+        "department_mismatch": 0.1,
+        "access_pattern_anomaly": 0.15
+      },
+      "decision_thresholds": {
+        "risk_high": 70,
+        "risk_critical": 85,
+        "abac_conditional": 0.6
+      },
+      "abac_policy_weights": {
+        "department": 0.3,
+        "device_trust": 0.25,
+        "location": 0.2,
+        "sensitivity": 0.25
+      }
+    },
+    "aggressive": {
+      "risk_factors": {
+        "login_attempts": 0.2,
+        "time_of_access": 0.15,
+        "location_change": 0.2,
+        "device_risk": 0.2,
+        "resource_sensitivity": 0.15,
+        "department_mismatch": 0.05,
+        "access_pattern_anomaly": 0.05
+      },
+      "decision_thresholds": {
+        "risk_high": 50,
+        "risk_critical": 70,
+        "abac_conditional": 0.75
+      },
+      "abac_policy_weights": {
+        "department": 0.35,
+        "device_trust": 0.3,
+        "location": 0.2,
+        "sensitivity": 0.15
+      }
+    }
+  },
+  "default_profile": "balanced"
+}
+
