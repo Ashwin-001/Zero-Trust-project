@@ -5,9 +5,9 @@ Handles access requests and applies Zero Trust decision engine
 
 from flask import Blueprint, request, jsonify, current_app
 from datetime import datetime
-import jwt
 
 from db import insert_ml_event
+from middleware.auth import get_token_user, require_auth, require_admin
 
 access_bp = Blueprint('access', __name__)
 
@@ -60,26 +60,6 @@ MOCK_RESOURCES = {
     }
 }
 
-def get_token_user(request_obj) -> dict:
-    """
-    Extract and verify user from JWT token.
-    """
-    auth_header = request_obj.headers.get('Authorization', '')
-    if not auth_header.startswith('Bearer '):
-        return None
-    
-    token = auth_header.replace('Bearer ', '')
-    
-    try:
-        payload = jwt.decode(
-            token,
-            current_app.config['JWT_SECRET'],
-            algorithms=['HS256']
-        )
-        return payload
-    except Exception:
-        return None
-
 def build_context(user_id: str, resource_id: str, request_data: dict) -> dict:
     """
     Build complete context for access decision.
@@ -111,7 +91,8 @@ def build_context(user_id: str, resource_id: str, request_data: dict) -> dict:
     return context
 
 @access_bp.route('/request', methods=['POST'])
-def request_access():
+@require_auth
+def request_access(token_payload=None):
     """
     Process an access request through the Zero Trust Decision Engine.
     
@@ -122,11 +103,6 @@ def request_access():
         'device_trust_score': 0-100 (optional)
     }
     """
-    # Authenticate user
-    token_payload = get_token_user(request)
-    if not token_payload:
-        return {'error': 'Unauthorized'}, 401
-    
     user_id = token_payload.get('user_id')
     data = request.get_json() or {}
     resource_id = data.get('resource_id')
@@ -221,6 +197,34 @@ def request_access():
             context=context
         )
 
+    # --- ML Prediction (Active ML in Decision Pipeline) ---
+    ml_analysis = {'model_available': False}
+    try:
+        from modules.ml_model import predict_decision as ml_predict
+        ml_result = ml_predict(context)
+        if ml_result.get('model_available'):
+            predicted = ml_result.get('predicted_decision', '')
+            probs = ml_result.get('probabilities', {})
+            confidence = max(probs.values()) if probs else 0
+            agrees = (predicted == decision_response['decision'])
+            ml_analysis = {
+                'model_available': True,
+                'predicted_decision': predicted,
+                'confidence': round(confidence, 4),
+                'probabilities': {k: round(v, 4) for k, v in probs.items()},
+                'agrees_with_rules': agrees,
+            }
+            # If ML disagrees, add a recommendation/warning
+            if not agrees:
+                decision_response['recommendations'].append(
+                    f"ML model predicts {predicted} "
+                    f"(confidence: {confidence:.0%}) — "
+                    f"disagreement with rule-based decision"
+                )
+    except Exception:
+        # ML prediction is non-critical; continue if it fails
+        pass
+
     # Persist ML event snapshot for later training
     ml_event = {
         "timestamp": decision_response["timestamp"],
@@ -264,7 +268,8 @@ def request_access():
                 'overall_score': risk_result['overall_risk_score'],
                 'risk_level': risk_result['risk_level'],
                 'factors': risk_result['factor_scores']
-            }
+            },
+            'ml_analysis': ml_analysis
         }
     }
 
@@ -304,14 +309,11 @@ def get_decision_stats():
     return stats, 200
 
 @access_bp.route('/denied-accesses', methods=['GET'])
-def get_denied_accesses():
+@require_auth
+def get_denied_accesses(token_payload=None):
     """
     Get all denied access attempts.
     """
-    token_payload = get_token_user(request)
-    if not token_payload:
-        return {'error': 'Unauthorized'}, 401
-    
     user_id = token_payload.get('user_id')
     user_data = current_app.users_db.get(user_id, {})
     
@@ -327,14 +329,11 @@ def get_denied_accesses():
     return {'denied_accesses': denied}, 200
 
 @access_bp.route('/high-risk-accesses', methods=['GET'])
-def get_high_risk():
+@require_auth
+def get_high_risk(token_payload=None):
     """
     Get all high-risk access attempts.
     """
-    token_payload = get_token_user(request)
-    if not token_payload:
-        return {'error': 'Unauthorized'}, 401
-    
     threshold = request.args.get('threshold', 70, type=float)
     high_risk = current_app.audit_log.get_high_risk_accesses(threshold)
     

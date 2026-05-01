@@ -62,10 +62,20 @@ class AuditBlock:
     def verify(self) -> bool:
         """
         Verify block integrity by recomputing hash.
+        Non-destructive: does not modify self.hash.
         """
-        original_hash = self.hash
-        self.compute_hash()
-        return self.hash == original_hash
+        block_string = json.dumps({
+            'block_id': self.block_id,
+            'user_id': self.user_id,
+            'resource_id': self.resource_id,
+            'decision': self.decision,
+            'risk_score': self.risk_score,
+            'timestamp': self.timestamp,
+            'previous_hash': self.previous_hash
+        }, sort_keys=True)
+        
+        recomputed = hashlib.sha256(block_string.encode()).hexdigest()
+        return self.hash == recomputed
 
 
 class BlockchainAuditLog:

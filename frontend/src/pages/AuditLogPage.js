@@ -52,8 +52,6 @@ function AuditLogPage({ currentUser }) {
   };
 
   useEffect(() => {
-    // We intentionally ignore loadAuditData in dependency array to avoid
-    // recreating the function on each render and re-triggering the effect.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     loadAuditData();
   }, [filter]);
@@ -73,6 +71,9 @@ function AuditLogPage({ currentUser }) {
     return 'badge-danger';
   };
 
+  // Use blockchain_stats for all counts (persisted and aligned with records)
+  const stats = metricsSummary?.blockchain_stats;
+
   return (
     <div className="page">
       <h1 className="page-title">📊 Audit Log & Blockchain Verification</h1>
@@ -80,7 +81,7 @@ function AuditLogPage({ currentUser }) {
       {error && <div className="error-message">{error}</div>}
 
       {chainIntegrity && metricsSummary && (
-        <div className={`info-message`} style={{ borderLeft: chainIntegrity.valid ? '4px solid #4caf50' : '4px solid #f44336' }}>
+        <div className="info-message" style={{ borderLeft: chainIntegrity.valid ? '4px solid var(--success)' : '4px solid var(--danger)' }}>
           <strong>🔗 Blockchain Integrity:</strong> {chainIntegrity.valid ? '✓ Verified' : '✗ Tampered'}
           <div style={{ marginTop: '8px', fontSize: '14px' }}>
             Active Risk Profile: <strong>{metricsSummary.risk_profile}</strong>
@@ -88,31 +89,31 @@ function AuditLogPage({ currentUser }) {
         </div>
       )}
 
-      {metricsSummary && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '30px' }}>
-          <div style={{ background: '#e8f5e9', padding: '20px', borderRadius: '8px', textAlign: 'center' }}>
-            <div style={{ fontSize: '32px', color: '#2e7d32', fontWeight: 'bold' }}>
-              {metricsSummary.decision_stats.allow_count}
+      {stats && (
+        <div className="audit-stats-grid">
+          <div className="audit-stat-card audit-stat-allow">
+            <div className="audit-stat-value">
+              {stats.allow_count}
             </div>
-            <div style={{ color: '#2e7d32', marginTop: '8px' }}>✓ Allowed</div>
+            <div className="audit-stat-label">✓ Allowed</div>
           </div>
-          <div style={{ background: '#fff3e0', padding: '20px', borderRadius: '8px', textAlign: 'center' }}>
-            <div style={{ fontSize: '32px', color: '#e65100', fontWeight: 'bold' }}>
-              {metricsSummary.decision_stats.conditional_count}
+          <div className="audit-stat-card audit-stat-conditional">
+            <div className="audit-stat-value">
+              {stats.conditional_count}
             </div>
-            <div style={{ color: '#e65100', marginTop: '8px' }}>⚠ Conditional</div>
+            <div className="audit-stat-label">⚠ Conditional</div>
           </div>
-          <div style={{ background: '#ffebee', padding: '20px', borderRadius: '8px', textAlign: 'center' }}>
-            <div style={{ fontSize: '32px', color: '#c62828', fontWeight: 'bold' }}>
-              {metricsSummary.decision_stats.deny_count}
+          <div className="audit-stat-card audit-stat-deny">
+            <div className="audit-stat-value">
+              {stats.deny_count}
             </div>
-            <div style={{ color: '#c62828', marginTop: '8px' }}>✗ Denied</div>
+            <div className="audit-stat-label">✗ Denied</div>
           </div>
-          <div style={{ background: '#f5f5f5', padding: '20px', borderRadius: '8px', textAlign: 'center' }}>
-            <div style={{ fontSize: '32px', color: '#667eea', fontWeight: 'bold' }}>
-              {metricsSummary.blockchain_stats.average_risk_score}
+          <div className="audit-stat-card audit-stat-risk">
+            <div className="audit-stat-value">
+              {stats.average_risk_score}
             </div>
-            <div style={{ color: '#667eea', marginTop: '8px' }}>Avg Risk</div>
+            <div className="audit-stat-label">Avg Risk</div>
           </div>
         </div>
       )}
@@ -152,10 +153,10 @@ function AuditLogPage({ currentUser }) {
         </div>
       ) : (
         <>
-          <p style={{ color: '#666', marginBottom: '15px' }}>Total Records: {auditLog.length}</p>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '15px' }}>Total Records: {auditLog.length}</p>
 
           {auditLog.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
+            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
               No audit logs found. Make some access requests first!
             </div>
           ) : (
@@ -188,10 +189,10 @@ function AuditLogPage({ currentUser }) {
                           {log.risk_score}
                         </span>
                       </td>
-                      <td style={{ fontSize: '11px', color: '#999', fontFamily: 'monospace', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <td style={{ fontSize: '11px', color: 'var(--text-secondary)', fontFamily: 'monospace', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {log.hash ? log.hash.substring(0, 12) + '...' : 'N/A'}
                       </td>
-                      <td style={{ fontSize: '12px', color: '#999' }}>
+                      <td style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
                         {new Date(log.timestamp).toLocaleString()}
                       </td>
                     </tr>

@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import DashboardPage from './pages/DashboardPage';
 import AccessRequestPage from './pages/AccessRequestPage';
 import DecisionPage from './pages/DecisionPage';
 import AuditLogPage from './pages/AuditLogPage';
 import ZkpDemoPage from './pages/ZkpDemoPage';
 import SessionMonitorPage from './pages/SessionMonitorPage';
+import AnalyticsPage from './pages/AnalyticsPage';
 import NavBar from './components/NavBar';
 import { getAuthToken, setAuthToken, authAPI } from './services/api';
 import useSessionHeartbeat from './hooks/useSessionHeartbeat';
@@ -19,24 +22,13 @@ function App() {
   const [activeSessionId, setActiveSessionId] = useState(null);
   const [sessionWarnings, setSessionWarnings] = useState([]);
 
-  useEffect(() => {
-    const token = getAuthToken();
-    if (token) {
-      verifySession();
-    } else {
-      setLoading(false);
-    }
-  }, []);
-
-  const verifySession = async () => {
+  const verifySession = useCallback(async () => {
     try {
       const response = await authAPI.verifyToken();
-      // Token is valid — restore user data from the response
       if (response.user) {
         setCurrentUser(response.user);
-        setCurrentPage('access');
+        setCurrentPage('dashboard');
       } else {
-        // Token valid but no user data; clear and redirect to login
         setAuthToken(null);
         setCurrentPage('login');
       }
@@ -46,11 +38,20 @@ function App() {
       setCurrentPage('login');
     }
     setLoading(false);
-  };
+  }, []);
+
+  useEffect(() => {
+    const token = getAuthToken();
+    if (token) {
+      verifySession();
+    } else {
+      setLoading(false);
+    }
+  }, [verifySession]);
 
   const handleLogin = (userData) => {
     setCurrentUser(userData);
-    setCurrentPage('access');
+    setCurrentPage('dashboard');
   };
 
   const handleLogout = () => {
@@ -61,7 +62,6 @@ function App() {
     setCurrentPage('login');
   };
 
-  // Called by AccessRequestPage when a session is created
   const handleSessionCreated = (sessionId) => {
     setActiveSessionId(sessionId);
     setSessionWarnings([]);
@@ -103,7 +103,11 @@ function App() {
       )}
       
       <div className="main-container">
-        {currentPage === 'login' && <LoginPage onLogin={handleLogin} />}
+        {currentPage === 'login' && <LoginPage onLogin={handleLogin} onNavigate={setCurrentPage} />}
+        {currentPage === 'register' && <RegisterPage onNavigate={setCurrentPage} />}
+        {currentPage === 'dashboard' && (
+          <DashboardPage currentUser={currentUser} onNavigate={setCurrentPage} />
+        )}
         {currentPage === 'access' && (
           <AccessRequestPage
             currentUser={currentUser}
@@ -115,6 +119,7 @@ function App() {
         {currentPage === 'audit' && <AuditLogPage currentUser={currentUser} onNavigate={setCurrentPage} />}
         {currentPage === 'zkp-demo' && <ZkpDemoPage currentUser={currentUser} />}
         {currentPage === 'sessions' && <SessionMonitorPage currentUser={currentUser} />}
+        {currentPage === 'analytics' && <AnalyticsPage currentUser={currentUser} />}
       </div>
     </div>
   );

@@ -3,33 +3,15 @@ Audit log routes
 Provides access to blockchain-based audit trails
 """
 
-from flask import Blueprint, request, jsonify, current_app
-import jwt
+from flask import Blueprint, request, current_app
+from middleware.auth import get_token_user, require_auth, require_admin
 
 audit_bp = Blueprint('audit', __name__)
 
-def get_token_user(request_obj):
-    """
-    Extract and verify user from JWT token.
-    """
-    auth_header = request_obj.headers.get('Authorization', '')
-    if not auth_header.startswith('Bearer '):
-        return None
-    
-    token = auth_header.replace('Bearer ', '')
-    
-    try:
-        payload = jwt.decode(
-            token,
-            current_app.config['JWT_SECRET'],
-            algorithms=['HS256']
-        )
-        return payload
-    except:
-        return None
 
 @audit_bp.route('/trail', methods=['GET'])
-def get_audit_trail():
+@require_auth
+def get_audit_trail(token_payload=None):
     """
     Get audit trail with optional filters.
     
@@ -38,10 +20,6 @@ def get_audit_trail():
     - resource_id: Filter by resource
     - decision: Filter by decision (ALLOW|CONDITIONAL|DENY)
     """
-    token_payload = get_token_user(request)
-    if not token_payload:
-        return {'error': 'Unauthorized'}, 401
-    
     user_id = token_payload.get('user_id')
     user_data = current_app.users_db.get(user_id, {})
     
@@ -70,16 +48,14 @@ def get_audit_trail():
         }
     }, 200
 
+
 @audit_bp.route('/user-history/<user_id>', methods=['GET'])
-def get_user_history(user_id):
+@require_auth
+def get_user_history(user_id, token_payload=None):
     """
     Get all access decisions for a specific user.
     Only admin or the user themselves can view.
     """
-    token_payload = get_token_user(request)
-    if not token_payload:
-        return {'error': 'Unauthorized'}, 401
-    
     requester_id = token_payload.get('user_id')
     requester_data = current_app.users_db.get(requester_id, {})
     
@@ -95,22 +71,14 @@ def get_user_history(user_id):
         'total_accesses': len(history)
     }, 200
 
+
 @audit_bp.route('/resource-log/<resource_id>', methods=['GET'])
-def get_resource_log(resource_id):
+@require_admin
+def get_resource_log(resource_id, token_payload=None):
     """
     Get all access requests for a specific resource.
     Only admin can view.
     """
-    token_payload = get_token_user(request)
-    if not token_payload:
-        return {'error': 'Unauthorized'}, 401
-    
-    user_data = current_app.users_db.get(token_payload.get('user_id'), {})
-    
-    # Only admin can view resource logs
-    if user_data.get('role') != 'admin':
-        return {'error': 'Only admins can view resource logs'}, 403
-    
     log = current_app.audit_log.get_resource_access_log(resource_id)
     
     return {
@@ -119,16 +87,14 @@ def get_resource_log(resource_id):
         'total_accesses': len(log)
     }, 200
 
+
 @audit_bp.route('/denied-attempts', methods=['GET'])
-def get_denied_attempts():
+@require_auth
+def get_denied_attempts(token_payload=None):
     """
     Get all denied access attempts.
     Only admin can view all; others see their own denials.
     """
-    token_payload = get_token_user(request)
-    if not token_payload:
-        return {'error': 'Unauthorized'}, 401
-    
     user_id = token_payload.get('user_id')
     user_data = current_app.users_db.get(user_id, {})
     
@@ -143,23 +109,16 @@ def get_denied_attempts():
         'count': len(denied)
     }, 200
 
+
 @audit_bp.route('/high-risk', methods=['GET'])
-def get_high_risk_accesses():
+@require_admin
+def get_high_risk_accesses(token_payload=None):
     """
     Get all high-risk access attempts (threshold-based).
     
     Query parameters:
     - threshold: Risk score threshold (default: 70)
     """
-    token_payload = get_token_user(request)
-    if not token_payload:
-        return {'error': 'Unauthorized'}, 401
-    
-    user_data = current_app.users_db.get(token_payload.get('user_id'), {})
-    
-    if user_data.get('role') != 'admin':
-        return {'error': 'Only admins can view high-risk accesses'}, 403
-    
     threshold = request.args.get('threshold', 70, type=float)
     high_risk = current_app.audit_log.get_high_risk_accesses(threshold)
     
@@ -169,21 +128,14 @@ def get_high_risk_accesses():
         'count': len(high_risk)
     }, 200
 
+
 @audit_bp.route('/chain-integrity', methods=['GET'])
-def check_chain_integrity():
+@require_admin
+def check_chain_integrity(token_payload=None):
     """
     Verify the integrity of the audit blockchain.
     Returns whether the chain has been tampered with.
     """
-    token_payload = get_token_user(request)
-    if not token_payload:
-        return {'error': 'Unauthorized'}, 401
-    
-    user_data = current_app.users_db.get(token_payload.get('user_id'), {})
-    
-    if user_data.get('role') != 'admin':
-        return {'error': 'Only admins can verify chain integrity'}, 403
-    
     is_valid, message = current_app.audit_log.verify_chain_integrity()
     
     return {
@@ -192,41 +144,27 @@ def check_chain_integrity():
         'total_blocks': len(current_app.audit_log.chain)
     }, 200
 
+
 @audit_bp.route('/statistics', methods=['GET'])
-def get_audit_statistics():
+@require_admin
+def get_audit_statistics(token_payload=None):
     """
     Get comprehensive statistics about the audit log.
     """
-    token_payload = get_token_user(request)
-    if not token_payload:
-        return {'error': 'Unauthorized'}, 401
-    
-    user_data = current_app.users_db.get(token_payload.get('user_id'), {})
-    
-    if user_data.get('role') != 'admin':
-        return {'error': 'Only admins can view audit statistics'}, 403
-    
     stats = current_app.audit_log.get_chain_statistics()
     
     return {
         'audit_statistics': stats
     }, 200
 
+
 @audit_bp.route('/export', methods=['GET'])
-def export_chain():
+@require_admin
+def export_chain(token_payload=None):
     """
     Export entire blockchain for backup or verification.
     Only admin can export.
     """
-    token_payload = get_token_user(request)
-    if not token_payload:
-        return {'error': 'Unauthorized'}, 401
-    
-    user_data = current_app.users_db.get(token_payload.get('user_id'), {})
-    
-    if user_data.get('role') != 'admin':
-        return {'error': 'Only admins can export the chain'}, 403
-    
     chain_export = current_app.audit_log.export_chain()
     
     return {
@@ -235,15 +173,13 @@ def export_chain():
         'integrity_verified': current_app.audit_log.verify_chain_integrity()[0]
     }, 200
 
+
 @audit_bp.route('/block/<int:block_id>', methods=['GET'])
-def get_block(block_id):
+@require_auth
+def get_block(block_id, token_payload=None):
     """
     Get a specific block from the blockchain.
     """
-    token_payload = get_token_user(request)
-    if not token_payload:
-        return {'error': 'Unauthorized'}, 401
-    
     if block_id < 0 or block_id >= len(current_app.audit_log.chain):
         return {'error': 'Block not found'}, 404
     

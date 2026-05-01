@@ -4,9 +4,11 @@ Authentication routes
 
 from flask import Blueprint, request, jsonify, current_app
 from datetime import datetime
+import re
 import secrets
 import jwt
 from models import User
+from middleware.rate_limiter import rate_limit, login_limiter
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -122,24 +124,44 @@ def verify_token(token: str) -> dict:
         return None
 
 @auth_bp.route('/register', methods=['POST'])
+@rate_limit(login_limiter)
 def register():
     """
-    User registration endpoint.
+    User registration endpoint with input validation.
     """
     data = request.get_json()
     
     if not data or not all(k in data for k in ['username', 'password', 'email', 'role', 'department']):
-        return {'error': 'Missing required fields'}, 400
+        return {'error': 'Missing required fields: username, password, email, role, department'}, 400
     
-    username = data['username']
+    username = data['username'].strip()
     password = data['password']
-    email = data['email']
-    role = data['role']
-    department = data['department']
+    email = data['email'].strip()
+    role = data['role'].strip()
+    department = data['department'].strip()
+    
+    # --- Input Validation ---
+    # Username: 3-30 chars, alphanumeric + underscores
+    if not re.match(r'^[a-zA-Z0-9_]{3,30}$', username):
+        return {'error': 'Username must be 3-30 characters (letters, numbers, underscores only)'}, 400
+    
+    # Password strength: min 6 chars
+    if len(password) < 6:
+        return {'error': 'Password must be at least 6 characters'}, 400
+    
+    # Email format
+    if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
+        return {'error': 'Invalid email format'}, 400
     
     # Validate role
-    if role not in ['admin', 'employee', 'viewer']:
-        return {'error': 'Invalid role'}, 400
+    valid_roles = ['admin', 'employee', 'viewer']
+    if role not in valid_roles:
+        return {'error': f'Invalid role. Must be one of: {", ".join(valid_roles)}'}, 400
+    
+    # Validate department
+    valid_departments = ['IT', 'Finance', 'HR', 'Dev', 'Operations', 'Marketing']
+    if department not in valid_departments:
+        return {'error': f'Invalid department. Must be one of: {", ".join(valid_departments)}'}, 400
     
     if username in MOCK_USERS:
         return {'error': 'User already exists'}, 409
@@ -179,10 +201,12 @@ def register():
     }, 201
 
 @auth_bp.route('/login', methods=['POST'])
+@rate_limit(login_limiter)
 def login():
     """
     User login endpoint.
     Validates credentials and returns JWT token.
+    Rate-limited to prevent brute-force attacks.
     """
     data = request.get_json()
     

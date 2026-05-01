@@ -5,30 +5,14 @@ Provides heartbeat, monitoring, and revocation endpoints.
 
 from flask import Blueprint, request, current_app
 from datetime import datetime
+from middleware.auth import require_auth, require_admin
 
 session_bp = Blueprint('session', __name__)
 
 
-def _get_token_user(request_obj) -> dict:
-    """Extract and verify user from JWT token."""
-    import jwt
-    auth_header = request_obj.headers.get('Authorization', '')
-    if not auth_header.startswith('Bearer '):
-        return None
-    token = auth_header.replace('Bearer ', '')
-    try:
-        payload = jwt.decode(
-            token,
-            current_app.config['JWT_SECRET'],
-            algorithms=['HS256']
-        )
-        return payload
-    except Exception:
-        return None
-
-
 @session_bp.route('/heartbeat', methods=['POST'])
-def heartbeat():
+@require_auth
+def heartbeat(token_payload=None):
     """
     Process a heartbeat from an active session.
 
@@ -46,10 +30,6 @@ def heartbeat():
     Returns:
         Re-evaluation result with session status and any actions taken.
     """
-    token_payload = _get_token_user(request)
-    if not token_payload:
-        return {'error': 'Unauthorized'}, 401
-
     data = request.get_json() or {}
     session_id = data.get('session_id')
 
@@ -94,7 +74,7 @@ def heartbeat():
         from db import insert_session_event
         history = current_app.session_manager.get_session_history(session_id)
         if history:
-            insert_session_event(history[-1])
+            insert_session_event(history[-1].copy())
     except Exception:
         pass  # Non-critical for academic demo
 
@@ -105,15 +85,12 @@ def heartbeat():
 
 
 @session_bp.route('/active', methods=['GET'])
-def get_active_sessions():
+@require_auth
+def get_active_sessions(token_payload=None):
     """
     List active sessions.
     Admin users see all sessions; others see only their own.
     """
-    token_payload = _get_token_user(request)
-    if not token_payload:
-        return {'error': 'Unauthorized'}, 401
-
     user_id = token_payload.get('user_id')
     user_data = current_app.users_db.get(user_id, {})
 
@@ -150,20 +127,11 @@ def get_active_sessions():
 
 
 @session_bp.route('/revoke/<session_id>', methods=['POST'])
-def revoke_session(session_id):
+@require_admin
+def revoke_session(session_id, token_payload=None):
     """
     Manually revoke an active session (admin only).
     """
-    token_payload = _get_token_user(request)
-    if not token_payload:
-        return {'error': 'Unauthorized'}, 401
-
-    user_id = token_payload.get('user_id')
-    user_data = current_app.users_db.get(user_id, {})
-
-    if user_data.get('role') != 'admin':
-        return {'error': 'Admin privileges required'}, 403
-
     session = current_app.session_manager.terminate_session(
         session_id, reason='admin_revoked'
     )
@@ -188,14 +156,11 @@ def revoke_session(session_id):
 
 
 @session_bp.route('/history/<session_id>', methods=['GET'])
-def get_session_history(session_id):
+@require_auth
+def get_session_history(session_id, token_payload=None):
     """
     Get re-evaluation history for a specific session.
     """
-    token_payload = _get_token_user(request)
-    if not token_payload:
-        return {'error': 'Unauthorized'}, 401
-
     user_id = token_payload.get('user_id')
     user_data = current_app.users_db.get(user_id, {})
 

@@ -7,6 +7,8 @@ from datetime import datetime, timedelta
 import json
 from pathlib import Path
 
+from modules.ml_model import predict_decision
+
 
 class RiskScoringEngine:
     """
@@ -210,11 +212,33 @@ class RiskScoringEngine:
             )
         }
         
+        # Integrate ML Model prediction (convert DENY/CONDITIONAL probability to risk 0-1)
+        ml_pred = predict_decision(context)
+        if ml_pred.get('model_available'):
+            probs = ml_pred.get('probabilities', {})
+            prob_deny = probs.get('DENY', 0.0)
+            prob_cond = probs.get('CONDITIONAL', 0.0)
+            # Give high risk to DENY confidence, medium to CONDITIONAL confidence
+            ml_risk = min(1.0, (prob_deny * 1.5) + (prob_cond * 0.5))
+            scores['ml_model_risk'] = ml_risk
+            # Automatically give ML model risk a 0.2 weight factor if not configured
+            if 'ml_model_risk' not in self.RISK_FACTORS:
+                self.RISK_FACTORS['ml_model_risk'] = 0.2
+        
         # Calculate weighted composite score
-        composite_score = 0.0
+        base_score = 0.0
         for factor, score in scores.items():
-            weight = self.RISK_FACTORS.get(factor, 0.0)
-            composite_score += score * weight
+            weight = self.RISK_FACTORS.get(factor, 0.1) # Default weight 0.1
+            base_score += score * weight
+        
+        # Prevent max score dilution from safe factors (always returning LOW)
+        # Take the most extreme single risk factor
+        max_factor_score = max(scores.values()) if scores else 0.0
+        
+        # Blend: Risk should be at least 85% of the most critical single factor
+        # And base combined risks are scaled up gently to accurately reflect combination.
+        composite_score = max(base_score * 2.0, max_factor_score * 0.85)
+        composite_score = min(1.0, composite_score)
         
         # Normalize to 0-100
         risk_score = composite_score * 100

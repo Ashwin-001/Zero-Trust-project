@@ -23,10 +23,12 @@ class DecisionEngine:
     
     def __init__(self, profile_config: dict | None = None):
         self.decision_log = []
+        # Use an instance-level copy so class-level defaults are never mutated
+        self.thresholds = dict(self.THRESHOLDS)
         if profile_config and 'decision_thresholds' in profile_config:
             for key, value in profile_config['decision_thresholds'].items():
-                if key in self.THRESHOLDS:
-                    self.THRESHOLDS[key] = float(value)
+                if key in self.thresholds:
+                    self.thresholds[key] = float(value)
     
     def make_decision(self, rbac_result: tuple, abac_result: dict, risk_result: dict) -> dict:
         """
@@ -62,7 +64,7 @@ class DecisionEngine:
             )
         
         # Rule 2: Critical risk always denies
-        if risk_score >= self.THRESHOLDS['risk_critical']:
+        if risk_score >= self.thresholds['risk_critical']:
             decision = 'DENY'
             reason = f"CRITICAL risk score {risk_score}. Access denied for security."
             recommendations = [
@@ -75,15 +77,15 @@ class DecisionEngine:
             )
         
         # Rule 3: High risk + poor ABAC = CONDITIONAL
-        if risk_score >= self.THRESHOLDS['risk_high'] or abac_score < self.THRESHOLDS['abac_conditional']:
+        if risk_score >= self.thresholds['risk_high'] or abac_score < self.thresholds['abac_conditional']:
             decision = 'CONDITIONAL'
             reason = "Access granted with security checks required"
             recommendations = []
             
-            if risk_score >= self.THRESHOLDS['risk_high']:
+            if risk_score >= self.thresholds['risk_high']:
                 recommendations.append(f"High risk score detected ({risk_score})")
             
-            if abac_score < self.THRESHOLDS['abac_conditional']:
+            if abac_score < self.thresholds['abac_conditional']:
                 recommendations.append(f"ABAC score low ({abac_score:.2f})")
             
             recommendations.extend([

@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang=en>
+  <head>
+    <title>ValueError: Input X contains NaN.
+RandomForestClassifier does not accept missing values encoded as NaN natively. For supervised learning, you might want to consider sklearn.ensemble.HistGradientBoostingClassifier and Regressor which accept missing values encoded as NaNs natively. Alternatively, it is possible to preprocess the data, for instance by using an imputer transformer in a pipeline or drop samples with missing values. See https://scikit-learn.org/stable/modules/impute.html You can find a list of all estimators that handle NaN values at the following page: https://scikit-learn.org/stable/modules/impute.html#estimators-that-handle-nan-values
+ // Werkzeug Debugger</title>
+    <link rel="stylesheet" href="?__debugger__=yes&amp;cmd=resource&amp;f=style.css">
+    <link rel="shortcut icon"
+        href="?__debugger__=yes&amp;cmd=resource&amp;f=console.png">
+    <script src="?__debugger__=yes&amp;cmd=resource&amp;f=debugger.js"></script>
+    <script>
+      var CONSOLE_MODE = false,
+          EVALEX = true,
+          EVALEX_TRUSTED = false,
+          SECRET = "mO75ZKA6etaIe6hOipwQ";
+    </script>
+  </head>
+  <body style="background-color: #fff">
+    <div class="debugger">
+<h1>ValueError</h1>
+<div class="detail">
+  <p class="errormsg">ValueError: Input X contains NaN.
+RandomForestClassifier does not accept missing values encoded as NaN natively. For supervised learning, you might want to consider sklearn.ensemble.HistGradientBoostingClassifier and Regressor which accept missing values encoded as NaNs natively. Alternatively, it is possible to preprocess the data, for instance by using an imputer transformer in a pipeline or drop samples with missing values. See https://scikit-learn.org/stable/modules/impute.html You can find a list of all estimators that handle NaN values at the following page: https://scikit-learn.org/stable/modules/impute.html#estimators-that-handle-nan-values
+</p>
+</div>
+<h2 class="traceback">Traceback <em>(most recent call last)</em></h2>
+<div class="traceback">
+  <h3></h3>
+  <ul><li><div class="frame" id="frame-1532946464992">
+  <h4>File <cite class="filename">"D:\All\ZeroTrust\backend\venv\Lib\site-packages\flask\app.py"</cite>,
+      line <em class="line">1536</em>,
+      in <code class="function">__call__</code></h4>
+  <div class="source library"><pre class="line before"><span class="ws">    </span>) -&gt; cabc.Iterable[bytes]:</pre>
+<pre class="line before"><span class="ws">        </span>&#34;&#34;&#34;The WSGI server calls the Flask application object as the</pre>
+<pre class="line before"><span class="ws">        </span>WSGI application. This calls :meth:`wsgi_app`, which can be</pre>
+<pre class="line before"><span class="ws">        </span>wrapped to apply middleware.</pre>
+<pre class="line before"><span class="ws">        </span>&#34;&#34;&#34;</pre>
+<pre class="line current"><span class="ws">        </span>return self.wsgi_app(environ, start_response)
+<span class="ws">        </span>       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^</pre></div>
+</div>
+
+<li><div class="frame" id="frame-1532944563584">
+  <h4>File <cite class="filename">"D:\All\ZeroTrust\backend\venv\Lib\site-packages\flask\app.py"</cite>,
+      line <em class="line">1514</em>,
+      in <code class="function">wsgi_app</code></h4>
+  <div class="source library"><pre class="line before"><span class="ws">            </span>try:</pre>
+<pre class="line before"><span class="ws">                </span>ctx.push()</pre>
+<pre class="line before"><span class="ws">                </span>response = self.full_dispatch_request()</pre>
+<pre class="line before"><span class="ws">            </span>except Exception as e:</pre>
+<pre class="line before"><span class="ws">                </span>error = e</pre>
+<pre class="line current"><span class="ws">                </span>response = self.handle_exception(e)
+<span class="ws">                </span>           ^^^^^^^^^^^^^^^^^^^^^^^^</pre>
+<pre class="line after"><span class="ws">            </span>except:</pre>
+<pre class="line after"><span class="ws">                </span>error = sys.exc_info()[1]</pre>
+<pre class="line after"><span class="ws">                </span>raise</pre>
+<pre class="line after"><span class="ws">            </span>return response(environ, start_response)</pre>
+<pre class="line after"><span class="ws">        </span>finally:</pre></div>
+</div>
+
+<li><div class="frame" id="frame-1532944563744">
+  <h4>File <cite class="filename">"D:\All\ZeroTrust\backend\venv\Lib\site-packages\flask_cors\extension.py"</cite>,
+      line <em class="line">176</em>,
+      in <code class="function">wrapped_function</code></h4>
+  <div class="source library"><pre class="line before"><span class="ws">        </span># Wrap exception handlers with cross_origin</pre>
+<pre class="line before"><span class="ws">        </span># These error handlers will still respect the behavior of the route</pre>
+<pre class="line before"><span class="ws">        </span>if options.get(&#39;intercept_exceptions&#39;, True):</pre>
+<pre class="line before"><span class="ws">            </span>def _after_request_decorator(f):</pre>
+<pre class="line before"><span class="ws">                </span>def wrapped_function(*args, **kwargs):</pre>
+<pre class="line current"><span class="ws">                    </span>return cors_after_request(app.make_response(f(*args, **kwargs)))
+<span class="ws">                    </span>                                            ^^^^^^^^^^^^^^^^^^</pre>
+<pre class="line after"><span class="ws">                </span>return wrapped_function</pre>
+<pre class="line after"><span class="ws"></span> </pre>
+<pre class="line after"><span class="ws">            </span>if hasattr(app, &#39;handle_exception&#39;):</pre>
+<pre class="line after"><span class="ws">                </span>app.handle_exception = _after_request_decorator(</pre>
+<pre class="line after"><span class="ws">                    </span>app.handle_exception)</pre></div>
+</div>
+
+<li><div class="frame" id="frame-1532944555584">
+  <h4>File <cite class="filename">"D:\All\ZeroTrust\backend\venv\Lib\site-packages\flask\app.py"</cite>,
+      line <em class="line">1511</em>,
+      in <code class="function">wsgi_app</code></h4>
+  <div class="source library"><pre class="line before"><span class="ws">        </span>ctx = self.request_context(environ)</pre>
+<pre class="line before"><span class="ws">        </span>error: BaseException | None = None</pre>
+<pre class="line before"><span class="ws">        </span>try:</pre>
+<pre class="line before"><span class="ws">            </span>try:</pre>
+<pre class="line before"><span class="ws">                </span>ctx.push()</pre>
+<pre class="line current"><span class="ws">                </span>response = self.full_dispatch_request()
+<span class="ws">                </span>           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^</pre>
+<pre class="line after"><span class="ws">            </span>except Exception as e:</pre>
+<pre class="line after"><span class="ws">                </span>error = e</pre>
+<pre class="line after"><span class="ws">                </span>response = self.handle_exception(e)</pre>
+<pre class="line after"><span class="ws">            </span>except:</pre>
+<pre class="line after"><span class="ws">                </span>error = sys.exc_info()[1]</pre></div>
+</div>
+
+<li><div class="frame" id="frame-1532944555744">
+  <h4>File <cite class="filename">"D:\All\ZeroTrust\backend\venv\Lib\site-packages\flask\app.py"</cite>,
+      line <em class="line">919</em>,
+      in <code class="function">full_dispatch_request</code></h4>
+  <div class="source library"><pre class="line before"><span class="ws">            </span>request_started.send(self, _async_wrapper=self.ensure_sync)</pre>
+<pre class="line before"><span class="ws">            </span>rv = self.preprocess_request()</pre>
+<pre class="line before"><span class="ws">            </span>if rv is None:</pre>
+<pre class="line before"><span class="ws">                </span>rv = self.dispatch_request()</pre>
+<pre class="line before"><span class="ws">        </span>except Exception as e:</pre>
+<pre class="line current"><span class="ws">            </span>rv = self.handle_user_exception(e)
+<span class="ws">            </span>     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^</pre>
+<pre class="line after"><span class="ws">        </span>return self.finalize_request(rv)</pre>
+<pre class="line after"><span class="ws"></span> </pre>
+<pre class="line after"><span class="ws">    </span>def finalize_request(</pre>
+<pre class="line after"><span class="ws">        </span>self,</pre>
+<pre class="line after"><span class="ws">        </span>rv: ft.ResponseReturnValue | HTTPException,</pre></div>
+</div>
+
+<li><div class="frame" id="frame-1532944559584">
+  <h4>File <cite class="filename">"D:\All\ZeroTrust\backend\venv\Lib\site-packages\flask_cors\extension.py"</cite>,
+      line <em class="line">176</em>,
+      in <code class="function">wrapped_function</code></h4>
+  <div class="source library"><pre class="line before"><span class="ws">        </span># Wrap exception handlers with cross_origin</pre>
+<pre class="line before"><span class="ws">        </span># These error handlers will still respect the behavior of the route</pre>
+<pre class="line before"><span class="ws">        </span>if options.get(&#39;intercept_exceptions&#39;, True):</pre>
+<pre class="line before"><span class="ws">            </span>def _after_request_decorator(f):</pre>
+<pre class="line before"><span class="ws">                </span>def wrapped_function(*args, **kwargs):</pre>
+<pre class="line current"><span class="ws">                    </span>return cors_after_request(app.make_response(f(*args, **kwargs)))
+<span class="ws">                    </span>                                            ^^^^^^^^^^^^^^^^^^</pre>
+<pre class="line after"><span class="ws">                </span>return wrapped_function</pre>
+<pre class="line after"><span class="ws"></span> </pre>
+<pre class="line after"><span class="ws">            </span>if hasattr(app, &#39;handle_exception&#39;):</pre>
+<pre class="line after"><span class="ws">                </span>app.handle_exception = _after_request_decorator(</pre>
+<pre class="line after"><span class="ws">                    </span>app.handle_exception)</pre></div>
+</div>
+
+<li><div class="frame" id="frame-1532944557664">
+  <h4>File <cite class="filename">"D:\All\ZeroTrust\backend\venv\Lib\site-packages\flask\app.py"</cite>,
+      line <em class="line">917</em>,
+      in <code class="function">full_dispatch_request</code></h4>
+  <div class="source library"><pre class="line before"><span class="ws"></span> </pre>
+<pre class="line before"><span class="ws">        </span>try:</pre>
+<pre class="line before"><span class="ws">            </span>request_started.send(self, _async_wrapper=self.ensure_sync)</pre>
+<pre class="line before"><span class="ws">            </span>rv = self.preprocess_request()</pre>
+<pre class="line before"><span class="ws">            </span>if rv is None:</pre>
+<pre class="line current"><span class="ws">                </span>rv = self.dispatch_request()
+<span class="ws">                </span>     ^^^^^^^^^^^^^^^^^^^^^^^</pre>
+<pre class="line after"><span class="ws">        </span>except Exception as e:</pre>
+<pre class="line after"><span class="ws">            </span>rv = self.handle_user_exception(e)</pre>
+<pre class="line after"><span class="ws">        </span>return self.finalize_request(rv)</pre>
+<pre class="line after"><span class="ws"></span> </pre>
+<pre class="line after"><span class="ws">    </span>def finalize_request(</pre></div>
+</div>
+
+<li><div class="frame" id="frame-1532944557504">
+  <h4>File <cite class="filename">"D:\All\ZeroTrust\backend\venv\Lib\site-packages\flask\app.py"</cite>,
+      line <em class="line">902</em>,
+      in <code class="function">dispatch_request</code></h4>
+  <div class="source library"><pre class="line before"><span class="ws">            </span>and req.method == &#34;OPTIONS&#34;</pre>
+<pre class="line before"><span class="ws">        </span>):</pre>
+<pre class="line before"><span class="ws">            </span>return self.make_default_options_response()</pre>
+<pre class="line before"><span class="ws">        </span># otherwise dispatch to the handler for that endpoint</pre>
+<pre class="line before"><span class="ws">        </span>view_args: dict[str, t.Any] = req.view_args  # type: ignore[assignment]</pre>
+<pre class="line current"><span class="ws">        </span>return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+<span class="ws">        </span>       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^</pre>
+<pre class="line after"><span class="ws"></span> </pre>
+<pre class="line after"><span class="ws">    </span>def full_dispatch_request(self) -&gt; Response:</pre>
+<pre class="line after"><span class="ws">        </span>&#34;&#34;&#34;Dispatches the request and on top of that performs request</pre>
+<pre class="line after"><span class="ws">        </span>pre and postprocessing as well as HTTP exception catching and</pre>
+<pre class="line after"><span class="ws">        </span>error handling.</pre></div>
+</div>
+
+<li><div class="frame" id="frame-1532944554784">
+  <h4>File <cite class="filename">"D:\All\ZeroTrust\backend\routes\ml_routes.py"</cite>,
+      line <em class="line">23</em>,
+      in <code class="function">train</code></h4>
+  <div class="source "><pre class="line before"><span class="ws"></span>@ml_bp.route(&#34;/train&#34;, methods=[&#34;POST&#34;])</pre>
+<pre class="line before"><span class="ws"></span>def train():</pre>
+<pre class="line before"><span class="ws">    </span>&#34;&#34;&#34;</pre>
+<pre class="line before"><span class="ws">    </span>Train ML model on collected events.</pre>
+<pre class="line before"><span class="ws">    </span>&#34;&#34;&#34;</pre>
+<pre class="line current"><span class="ws">    </span>metrics, message = train_decision_model()
+<span class="ws">    </span>                   ^^^^^^^^^^^^^^^^^^^^^^</pre>
+<pre class="line after"><span class="ws">    </span>return jsonify({&#34;message&#34;: message, &#34;metrics&#34;: metrics}), 200</pre>
+<pre class="line after"><span class="ws"></span> </pre>
+<pre class="line after"><span class="ws"></span> </pre>
+<pre class="line after"><span class="ws"></span>@ml_bp.route(&#34;/predict&#34;, methods=[&#34;POST&#34;])</pre>
+<pre class="line after"><span class="ws"></span>def predict():</pre></div>
+</div>
+
+<li><div class="frame" id="frame-1532944558944">
+  <h4>File <cite class="filename">"D:\All\ZeroTrust\backend\modules\ml_model.py"</cite>,
+      line <em class="line">123</em>,
+      in <code class="function">train_decision_model</code></h4>
+  <div class="source "><pre class="line before"><span class="ws">      </span>n_jobs=-1,</pre>
+<pre class="line before"><span class="ws">  </span>)</pre>
+<pre class="line before"><span class="ws"></span> </pre>
+<pre class="line before"><span class="ws">  </span>pipeline = Pipeline(</pre>
+<pre class="line before"><span class="ws">      </span>steps=[</pre>
+<pre class="line current"><span class="ws">          </span>(&#34;preprocess&#34;, preprocessor),
+<span class="ws">          </span>^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^</pre>
+<pre class="line after"><span class="ws">          </span>(&#34;clf&#34;, clf),</pre>
+<pre class="line after"><span class="ws">      </span>]</pre>
+<pre class="line after"><span class="ws">  </span>)</pre>
+<pre class="line after"><span class="ws"></span> </pre>
+<pre class="line after"><span class="ws">  </span>X_train, X_test, y_train, y_test = train_test_split(</pre></div>
+</div>
+
+<li><div class="frame" id="frame-1532944555424">
+  <h4>File <cite class="filename">"D:\All\ZeroTrust\backend\venv\Lib\site-packages\sklearn\base.py"</cite>,
+      line <em class="line">1336</em>,
+      in <code class="function">wrapper</code></h4>
+  <div class="source library"><pre class="line before"><span class="ws">            </span>with config_context(</pre>
+<pre class="line before"><span class="ws">                </span>skip_parameter_validation=(</pre>
+<pre class="line before"><span class="ws">                    </span>prefer_skip_nested_validation or global_skip_validation</pre>
+<pre class="line before"><span class="ws">                </span>)</pre>
+<pre class="line before"><span class="ws">            </span>):</pre>
+<pre class="line current"><span class="ws">                </span>return fit_method(estimator, *args, **kwargs)
+<span class="ws">                </span>       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^</pre>
+<pre class="line after"><span class="ws"></span> </pre>
+<pre class="line after"><span class="ws">        </span>return wrapper</pre>
+<pre class="line after"><span class="ws"></span> </pre>
+<pre class="line after"><span class="ws">    </span>return decorator</pre></div>
+</div>
+
+<li><div class="frame" id="frame-1532944552064">
+  <h4>File <cite class="filename">"D:\All\ZeroTrust\backend\venv\Lib\site-packages\sklearn\pipeline.py"</cite>,
+      line <em class="line">621</em>,
+      in <code class="function">fit</code></h4>
+  <div class="source library"><pre class="line before"><span class="ws">                </span>last_step_params = self._get_metadata_for_step(</pre>
+<pre class="line before"><span class="ws">                    </span>step_idx=len(self) - 1,</pre>
+<pre class="line before"><span class="ws">                    </span>step_params=routed_params[self.steps[-1][0]],</pre>
+<pre class="line before"><span class="ws">                    </span>all_params=params,</pre>
+<pre class="line before"><span class="ws">                </span>)</pre>
+<pre class="line current"><span class="ws">                </span>self._final_estimator.fit(Xt, y, **last_step_params[&#34;fit&#34;])
+<span class="ws">                </span>^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^</pre>
+<pre class="line after"><span class="ws"></span> </pre>
+<pre class="line after"><span class="ws">        </span>return self</pre>
+<pre class="line after"><span class="ws"></span> </pre>
+<pre class="line after"><span class="ws">    </span>def _can_fit_transform(self):</pre>
+<pre class="line after"><span class="ws">        </span>return (</pre></div>
+</div>
+
+<li><div class="frame" id="frame-1532944561344">
+  <h4>File <cite class="filename">"D:\All\ZeroTrust\backend\venv\Lib\site-packages\sklearn\base.py"</cite>,
+      line <em class="line">1336</em>,
+      in <code class="function">wrapper</code></h4>
+  <div class="source library"><pre class="line before"><span class="ws">            </span>with config_context(</pre>
+<pre class="line before"><span class="ws">                </span>skip_parameter_validation=(</pre>
+<pre class="line before"><span class="ws">                    </span>prefer_skip_nested_validation or global_skip_validation</pre>
+<pre class="line before"><span class="ws">                </span>)</pre>
+<pre class="line before"><span class="ws">            </span>):</pre>
+<pre class="line current"><span class="ws">                </span>return fit_method(estimator, *args, **kwargs)
+<span class="ws">                </span>       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^</pre>
+<pre class="line after"><span class="ws"></span> </pre>
+<pre class="line after"><span class="ws">        </span>return wrapper</pre>
+<pre class="line after"><span class="ws"></span> </pre>
+<pre class="line after"><span class="ws">    </span>return decorator</pre></div>
+</div>
+
+<li><div class="frame" id="frame-1532944558464">
+  <h4>File <cite class="filename">"D:\All\ZeroTrust\backend\venv\Lib\site-packages\sklearn\ensemble\_forest.py"</cite>,
+      line <em class="line">374</em>,
+      in <code class="function">fit</code></h4>
+  <div class="source library"><pre class="line before"><span class="ws">        </span># will raise an error if the underlying tree base estimator can&#39;t handle missing</pre>
+<pre class="line before"><span class="ws">        </span># values. Only the criterion is required to determine if the tree supports</pre>
+<pre class="line before"><span class="ws">        </span># missing values.</pre>
+<pre class="line before"><span class="ws">        </span>estimator = type(self.estimator)(criterion=self.criterion)</pre>
+<pre class="line before"><span class="ws">        </span>missing_values_in_feature_mask = (</pre>
+<pre class="line current"><span class="ws">            </span>estimator._compute_missing_values_in_feature_mask(
+<span class="ws">            </span>^</pre>
+<pre class="line after"><span class="ws">                </span>X, estimator_name=self.__class__.__name__</pre>
+<pre class="line after"><span class="ws">            </span>)</pre>
+<pre class="line after"><span class="ws">        </span>)</pre>
+<pre class="line after"><span class="ws"></span> </pre>
+<pre class="line after"><span class="ws">        </span>if sample_weight is not None:</pre></div>
+</div>
+
+<li><div class="frame" id="frame-1532944562944">
+  <h4>File <cite class="filename">"D:\All\ZeroTrust\backend\venv\Lib\site-packages\sklearn\tree\_classes.py"</cite>,
+      line <em class="line">217</em>,
+      in <code class="function">_compute_missing_values_in_feature_mask</code></h4>
+  <div class="source library"><pre class="line before"><span class="ws">        </span>&#34;&#34;&#34;</pre>
+<pre class="line before"><span class="ws">        </span>estimator_name = estimator_name or self.__class__.__name__</pre>
+<pre class="line before"><span class="ws">        </span>common_kwargs = dict(estimator_name=estimator_name, input_name=&#34;X&#34;)</pre>
+<pre class="line before"><span class="ws"></span> </pre>
+<pre class="line before"><span class="ws">        </span>if not self._support_missing_values(X):</pre>
+<pre class="line current"><span class="ws">            </span>assert_all_finite(X, **common_kwargs)
+<span class="ws">            </span>^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^</pre>
+<pre class="line after"><span class="ws">            </span>return None</pre>
+<pre class="line after"><span class="ws"></span> </pre>
+<pre class="line after"><span class="ws">        </span>with np.errstate(over=&#34;ignore&#34;):</pre>
+<pre class="line after"><span class="ws">            </span>overall_sum = np.sum(X)</pre>
+<pre class="line after"><span class="ws"></span> </pre></div>
+</div>
+
+<li><div class="frame" id="frame-1532944555904">
+  <h4>File <cite class="filename">"D:\All\ZeroTrust\backend\venv\Lib\site-packages\sklearn\utils\validation.py"</cite>,
+      line <em class="line">223</em>,
+      in <code class="function">assert_all_finite</code></h4>
+  <div class="source library"><pre class="line before"><span class="ws">    </span>...     print(&#34;Test passed: Array contains only finite values.&#34;)</pre>
+<pre class="line before"><span class="ws">    </span>... except ValueError:</pre>
+<pre class="line before"><span class="ws">    </span>...     print(&#34;Test failed: Array contains non-finite values.&#34;)</pre>
+<pre class="line before"><span class="ws">    </span>Test failed: Array contains non-finite values.</pre>
+<pre class="line before"><span class="ws">    </span>&#34;&#34;&#34;</pre>
+<pre class="line current"><span class="ws">    </span>_assert_all_finite(
+<span class="ws">    </span>^</pre>
+<pre class="line after"><span class="ws">        </span>X.data if sp.issparse(X) else X,</pre>
+<pre class="line after"><span class="ws">        </span>allow_nan=allow_nan,</pre>
+<pre class="line after"><span class="ws">        </span>estimator_name=estimator_name,</pre>
+<pre class="line after"><span class="ws">        </span>input_name=input_name,</pre>
+<pre class="line after"><span class="ws">    </span>)</pre></div>
+</div>
+
+<li><div class="frame" id="frame-1532944550944">
+  <h4>File <cite class="filename">"D:\All\ZeroTrust\backend\venv\Lib\site-packages\sklearn\utils\validation.py"</cite>,
+      line <em class="line">133</em>,
+      in <code class="function">_assert_all_finite</code></h4>
+  <div class="source library"><pre class="line before"><span class="ws">    </span>with np.errstate(over=&#34;ignore&#34;):</pre>
+<pre class="line before"><span class="ws">        </span>first_pass_isfinite = xp.isfinite(xp.sum(X))</pre>
+<pre class="line before"><span class="ws">    </span>if first_pass_isfinite:</pre>
+<pre class="line before"><span class="ws">        </span>return</pre>
+<pre class="line before"><span class="ws"></span> </pre>
+<pre class="line current"><span class="ws">    </span>_assert_all_finite_element_wise(
+<span class="ws">    </span>^</pre>
+<pre class="line after"><span class="ws">        </span>X,</pre>
+<pre class="line after"><span class="ws">        </span>xp=xp,</pre>
+<pre class="line after"><span class="ws">        </span>allow_nan=allow_nan,</pre>
+<pre class="line after"><span class="ws">        </span>msg_dtype=msg_dtype,</pre>
+<pre class="line after"><span class="ws">        </span>estimator_name=estimator_name,</pre></div>
+</div>
+
+<li><div class="frame" id="frame-1532944551744">
+  <h4>File <cite class="filename">"D:\All\ZeroTrust\backend\venv\Lib\site-packages\sklearn\utils\validation.py"</cite>,
+      line <em class="line">182</em>,
+      in <code class="function">_assert_all_finite_element_wise</code></h4>
+  <div class="source library"><pre class="line before"><span class="ws">                </span>&#34; You can find a list of all estimators that handle NaN values&#34;</pre>
+<pre class="line before"><span class="ws">                </span>&#34; at the following page:&#34;</pre>
+<pre class="line before"><span class="ws">                </span>&#34; https://scikit-learn.org/stable/modules/impute.html&#34;</pre>
+<pre class="line before"><span class="ws">                </span>&#34;#estimators-that-handle-nan-values&#34;</pre>
+<pre class="line before"><span class="ws">            </span>)</pre>
+<pre class="line current"><span class="ws">        </span>raise ValueError(msg_err)
+<span class="ws">        </span>^^^^^^^^^^^^^^^^^^^^^^^^^</pre>
+<pre class="line after"><span class="ws"></span> </pre>
+<pre class="line after"><span class="ws"></span> </pre>
+<pre class="line after"><span class="ws"></span>def assert_all_finite(</pre>
+<pre class="line after"><span class="ws">    </span>X,</pre>
+<pre class="line after"><span class="ws">    </span>*,</pre></div>
+</div>
+</ul>
+  <blockquote>ValueError: Input X contains NaN.
+RandomForestClassifier does not accept missing values encoded as NaN natively. For supervised learning, you might want to consider sklearn.ensemble.HistGradientBoostingClassifier and Regressor which accept missing values encoded as NaNs natively. Alternatively, it is possible to preprocess the data, for instance by using an imputer transformer in a pipeline or drop samples with missing values. See https://scikit-learn.org/stable/modules/impute.html You can find a list of all estimators that handle NaN values at the following page: https://scikit-learn.org/stable/modules/impute.html#estimators-that-handle-nan-values
+</blockquote>
+</div>
+
+<div class="plain">
+    <p>
+      This is the Copy/Paste friendly version of the traceback.
+    </p>
+    <textarea cols="50" rows="10" name="code" readonly>Traceback (most recent call last):
+  File &#34;D:\All\ZeroTrust\backend\venv\Lib\site-packages\flask\app.py&#34;, line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &#34;D:\All\ZeroTrust\backend\venv\Lib\site-packages\flask\app.py&#34;, line 1514, in wsgi_app
+    response = self.handle_exception(e)
+  File &#34;D:\All\ZeroTrust\backend\venv\Lib\site-packages\flask_cors\extension.py&#34;, line 176, in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ~^^^^^^^^^^^^^^^^^
+  File &#34;D:\All\ZeroTrust\backend\venv\Lib\site-packages\flask\app.py&#34;, line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+  File &#34;D:\All\ZeroTrust\backend\venv\Lib\site-packages\flask\app.py&#34;, line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File &#34;D:\All\ZeroTrust\backend\venv\Lib\site-packages\flask_cors\extension.py&#34;, line 176, in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ~^^^^^^^^^^^^^^^^^
+  File &#34;D:\All\ZeroTrust\backend\venv\Lib\site-packages\flask\app.py&#34;, line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File &#34;D:\All\ZeroTrust\backend\venv\Lib\site-packages\flask\app.py&#34;, line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File &#34;D:\All\ZeroTrust\backend\routes\ml_routes.py&#34;, line 23, in train
+    metrics, message = train_decision_model()
+                       ~~~~~~~~~~~~~~~~~~~~^^
+  File &#34;D:\All\ZeroTrust\backend\modules\ml_model.py&#34;, line 123, in train_decision_model
+    (&#34;preprocess&#34;, preprocessor),
+    ^^^^^^^^^^^^^^^^^^^^^^
+  File &#34;D:\All\ZeroTrust\backend\venv\Lib\site-packages\sklearn\base.py&#34;, line 1336, in wrapper
+    return fit_method(estimator, *args, **kwargs)
+  File &#34;D:\All\ZeroTrust\backend\venv\Lib\site-packages\sklearn\pipeline.py&#34;, line 621, in fit
+    self._final_estimator.fit(Xt, y, **last_step_params[&#34;fit&#34;])
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &#34;D:\All\ZeroTrust\backend\venv\Lib\site-packages\sklearn\base.py&#34;, line 1336, in wrapper
+    return fit_method(estimator, *args, **kwargs)
+  File &#34;D:\All\ZeroTrust\backend\venv\Lib\site-packages\sklearn\ensemble\_forest.py&#34;, line 374, in fit
+    estimator._compute_missing_values_in_feature_mask(
+    ^
+  File &#34;D:\All\ZeroTrust\backend\venv\Lib\site-packages\sklearn\tree\_classes.py&#34;, line 217, in _compute_missing_values_in_feature_mask
+    assert_all_finite(X, **common_kwargs)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File &#34;D:\All\ZeroTrust\backend\venv\Lib\site-packages\sklearn\utils\validation.py&#34;, line 223, in assert_all_finite
+    _assert_all_finite(
+    ^
+  File &#34;D:\All\ZeroTrust\backend\venv\Lib\site-packages\sklearn\utils\validation.py&#34;, line 133, in _assert_all_finite
+    _assert_all_finite_element_wise(
+    ^
+  File &#34;D:\All\ZeroTrust\backend\venv\Lib\site-packages\sklearn\utils\validation.py&#34;, line 182, in _assert_all_finite_element_wise
+    raise ValueError(msg_err)
+ValueError: Input X contains NaN.
+RandomForestClassifier does not accept missing values encoded as NaN natively. For supervised learning, you might want to consider sklearn.ensemble.HistGradientBoostingClassifier and Regressor which accept missing values encoded as NaNs natively. Alternatively, it is possible to preprocess the data, for instance by using an imputer transformer in a pipeline or drop samples with missing values. See https://scikit-learn.org/stable/modules/impute.html You can find a list of all estimators that handle NaN values at the following page: https://scikit-learn.org/stable/modules/impute.html#estimators-that-handle-nan-values
+</textarea>
+</div>
+<div class="explanation">
+  The debugger caught an exception in your WSGI application.  You can now
+  look at the traceback which led to the error.  <span class="nojavascript">
+  If you enable JavaScript you can also use additional features such as code
+  execution (if the evalex feature is enabled), automatic pasting of the
+  exceptions and much more.</span>
+</div>
+      <div class="footer">
+        Brought to you by <strong class="arthur">DON'T PANIC</strong>, your
+        friendly Werkzeug powered traceback interpreter.
+      </div>
+    </div>
+
+    <div class="pin-prompt">
+      <div class="inner">
+        <h3>Console Locked</h3>
+        <p>
+          The console is locked and needs to be unlocked by entering the PIN.
+          You can find the PIN printed out on the standard output of your
+          shell that runs the server.
+        <form>
+          <p>PIN:
+            <input type=text name=pin size=14>
+            <input type=submit name=btn value="Confirm Pin">
+        </form>
+      </div>
+    </div>
+  </body>
+</html>
+
+<!--
+
+Traceback (most recent call last):
+  File "D:\All\ZeroTrust\backend\venv\Lib\site-packages\flask\app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\All\ZeroTrust\backend\venv\Lib\site-packages\flask\app.py", line 1514, in wsgi_app
+    response = self.handle_exception(e)
+  File "D:\All\ZeroTrust\backend\venv\Lib\site-packages\flask_cors\extension.py", line 176, in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ~^^^^^^^^^^^^^^^^^
+  File "D:\All\ZeroTrust\backend\venv\Lib\site-packages\flask\app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\All\ZeroTrust\backend\venv\Lib\site-packages\flask\app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\All\ZeroTrust\backend\venv\Lib\site-packages\flask_cors\extension.py", line 176, in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ~^^^^^^^^^^^^^^^^^
+  File "D:\All\ZeroTrust\backend\venv\Lib\site-packages\flask\app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\All\ZeroTrust\backend\venv\Lib\site-packages\flask\app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "D:\All\ZeroTrust\backend\routes\ml_routes.py", line 23, in train
+    metrics, message = train_decision_model()
+                       ~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\All\ZeroTrust\backend\modules\ml_model.py", line 123, in train_decision_model
+    ("preprocess", preprocessor),
+    ^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\All\ZeroTrust\backend\venv\Lib\site-packages\sklearn\base.py", line 1336, in wrapper
+    return fit_method(estimator, *args, **kwargs)
+  File "D:\All\ZeroTrust\backend\venv\Lib\site-packages\sklearn\pipeline.py", line 621, in fit
+    self._final_estimator.fit(Xt, y, **last_step_params["fit"])
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\All\ZeroTrust\backend\venv\Lib\site-packages\sklearn\base.py", line 1336, in wrapper
+    return fit_method(estimator, *args, **kwargs)
+  File "D:\All\ZeroTrust\backend\venv\Lib\site-packages\sklearn\ensemble\_forest.py", line 374, in fit
+    estimator._compute_missing_values_in_feature_mask(
+    ^
+  File "D:\All\ZeroTrust\backend\venv\Lib\site-packages\sklearn\tree\_classes.py", line 217, in _compute_missing_values_in_feature_mask
+    assert_all_finite(X, **common_kwargs)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "D:\All\ZeroTrust\backend\venv\Lib\site-packages\sklearn\utils\validation.py", line 223, in assert_all_finite
+    _assert_all_finite(
+    ^
+  File "D:\All\ZeroTrust\backend\venv\Lib\site-packages\sklearn\utils\validation.py", line 133, in _assert_all_finite
+    _assert_all_finite_element_wise(
+    ^
+  File "D:\All\ZeroTrust\backend\venv\Lib\site-packages\sklearn\utils\validation.py", line 182, in _assert_all_finite_element_wise
+    raise ValueError(msg_err)
+ValueError: Input X contains NaN.
+RandomForestClassifier does not accept missing values encoded as NaN natively. For supervised learning, you might want to consider sklearn.ensemble.HistGradientBoostingClassifier and Regressor which accept missing values encoded as NaNs natively. Alternatively, it is possible to preprocess the data, for instance by using an imputer transformer in a pipeline or drop samples with missing values. See https://scikit-learn.org/stable/modules/impute.html You can find a list of all estimators that handle NaN values at the following page: https://scikit-learn.org/stable/modules/impute.html#estimators-that-handle-nan-values
+
+
+-->

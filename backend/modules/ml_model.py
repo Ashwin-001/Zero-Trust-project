@@ -18,10 +18,11 @@ from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import train_test_split
+from functools import lru_cache
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
 
-from db import _get_db
+from db import load_ml_events
 
 
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "models")
@@ -30,12 +31,12 @@ MODEL_PATH = os.path.join(MODEL_DIR, "risk_decision_model.pkl")
 
 def _load_events() -> pd.DataFrame:
   """
-  Load ML events from MongoDB and return as DataFrame.
+  Load ML events from the database (MongoDB or in-memory fallback)
+  and return as DataFrame.
   Each event should contain the contextual features and
   the final decision label.
   """
-  db = _get_db()
-  docs = list(db.ml_events.find({}))
+  docs = load_ml_events()
   if not docs:
       return pd.DataFrame()
 
@@ -72,13 +73,6 @@ def train_decision_model() -> Tuple[dict, str]:
       "resource_id",
   ]
 
-  # Ensure all required columns exist (fill missing with defaults)
-  for col in feature_cols:
-      if col not in df.columns:
-          df[col] = None
-
-  X = df[feature_cols]
-
   numeric_features = [
       "failed_attempts",
       "access_hour",
@@ -93,6 +87,27 @@ def train_decision_model() -> Tuple[dict, str]:
       "user_id",
       "resource_id",
   ]
+
+  # Compute resource_required_departments_size if it was stored as a list
+  if "resource_required_departments_size" not in df.columns and "resource_required_departments" in df.columns:
+      df["resource_required_departments_size"] = df["resource_required_departments"].apply(
+          lambda x: len(x) if isinstance(x, list) else 0
+      )
+
+  # Fill missing columns and ensure proper data types to prevent sklearn NaNs
+  for col in numeric_features:
+      if col not in df.columns:
+          df[col] = 0
+      # Coerce invalid numerics to NaN then fill with 0
+      df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+
+  for col in categorical_features:
+      if col not in df.columns:
+          df[col] = "missing"
+      # Fill NaNs then cast all categories to string
+      df[col] = df[col].fillna("missing").astype(str)
+
+  X = df[feature_cols]
 
   preprocessor = ColumnTransformer(
       transformers=[
@@ -127,6 +142,7 @@ def train_decision_model() -> Tuple[dict, str]:
 
   os.makedirs(MODEL_DIR, exist_ok=True)
   joblib.dump(pipeline, MODEL_PATH)
+  _load_model.cache_clear()
 
   metrics = {
       "samples": int(len(df)),
@@ -138,6 +154,7 @@ def train_decision_model() -> Tuple[dict, str]:
   return metrics, f"Model trained on {len(df)} events with accuracy {acc:.3f}"
 
 
+@lru_cache(maxsize=1)
 def _load_model():
   if not os.path.exists(MODEL_PATH):
       return None

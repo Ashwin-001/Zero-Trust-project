@@ -23,6 +23,9 @@ function NavBar({ currentUser, onNavigate, onLogout }) {
         </div>
 
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <button className="button secondary" onClick={() => onNavigate('dashboard')}>
+            Dashboard
+          </button>
           <button className="button secondary" onClick={() => onNavigate('access')}>
             Access Request
           </button>
@@ -30,7 +33,10 @@ function NavBar({ currentUser, onNavigate, onLogout }) {
             Audit Logs
           </button>
           <button className="button secondary" onClick={() => onNavigate('sessions')}>
-            Session Monitor
+            Sessions
+          </button>
+          <button className="button secondary" onClick={() => onNavigate('analytics')}>
+            Analytics
           </button>
           <button className="button secondary" onClick={() => onNavigate('zkp-demo')}>
             ZKP Demo

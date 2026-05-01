@@ -77,7 +77,9 @@ export const accessAPI = {
       body: JSON.stringify({ 
         resource_id: resourceId,
         current_location: currentLocation,
-        ...(deviceTrustScore && { device_trust_score: deviceTrustScore })
+        ...(deviceTrustScore !== undefined && deviceTrustScore !== null
+          ? { device_trust_score: deviceTrustScore }
+          : {})
       })
     }),
   
@@ -135,10 +137,43 @@ export const metricsAPI = {
   getSummary: () =>
     makeRequest('/metrics/summary', { method: 'GET' }),
   checkIntegrity: () =>
-    makeRequest('/metrics/integrity', { method: 'GET' })
+    makeRequest('/metrics/integrity', { method: 'GET' }),
+  getAnalytics: () =>
+    makeRequest('/metrics/analytics', { method: 'GET' })
 };
 
 export const zkpAPI = {
+  getParameters: () =>
+    makeRequest('/zkp/parameters', { method: 'GET' }),
+  
+  generateKeypair: () =>
+    makeRequest('/zkp/keygen', { method: 'POST' }),
+  
+  interactiveProve: (privateKey) =>
+    makeRequest('/zkp/prove/interactive', {
+      method: 'POST',
+      body: JSON.stringify(privateKey ? { private_key: privateKey } : {})
+    }),
+  
+  nonInteractiveProve: (privateKey, message) =>
+    makeRequest('/zkp/prove/non-interactive', {
+      method: 'POST',
+      body: JSON.stringify({ private_key: privateKey, message: message || '' })
+    }),
+  
+  nonInteractiveVerify: (publicKey, proof) =>
+    makeRequest('/zkp/verify/non-interactive', {
+      method: 'POST',
+      body: JSON.stringify({ public_key: publicKey, proof })
+    }),
+  
+  getMerkleTree: () =>
+    makeRequest('/zkp/merkle/tree', { method: 'GET' }),
+  
+  getMerkleProof: (blockIndex) =>
+    makeRequest(`/zkp/merkle/proof/${blockIndex}`, { method: 'GET' }),
+
+  // Legacy
   generateChallenge: (userId) =>
     makeRequest('/zkp/challenge', {
       method: 'POST',
@@ -149,6 +184,28 @@ export const zkpAPI = {
       method: 'POST',
       body: JSON.stringify({ user_id: userId, response, correct_response: correctResponse })
     })
+};
+
+// ML Model APIs
+export const mlAPI = {
+  getStatus: () =>
+    makeRequest('/ml/status', { method: 'GET' }),
+
+  train: () =>
+    makeRequest('/ml/train', { method: 'POST' }),
+
+  predict: (resourceId, currentLocation, deviceTrustScore) =>
+    makeRequest('/ml/predict', {
+      method: 'POST',
+      body: JSON.stringify({
+        resource_id: resourceId,
+        current_location: currentLocation,
+        device_trust_score: deviceTrustScore
+      })
+    }),
+
+  getFeatureImportance: () =>
+    makeRequest('/ml/importance', { method: 'GET' })
 };
 
 // Session / Continuous Verification APIs
@@ -179,6 +236,7 @@ const api = {
   auditAPI,
   metricsAPI,
   zkpAPI,
+  mlAPI,
   sessionAPI
 };
 
